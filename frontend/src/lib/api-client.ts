@@ -95,11 +95,50 @@ export interface QueueTask {
   updated_at: string;
 }
 
+export interface AuthUser {
+  id: string;
+  email: string;
+  full_name: string;
+  studio_name?: string;
+  role: 'admin' | 'photographer' | 'assistant' | 'client' | 'editor';
+  avatar_url?: string;
+  created_at?: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  expires_in: number;
+  user: AuthUser;
+  message?: string;
+}
+
 export class C2CClient {
   private baseURL: string;
+  private token: string | null = null;
 
   constructor(baseURL: string = BASE_URL) {
     this.baseURL = baseURL;
+    if (typeof window !== 'undefined') {
+      this.token = localStorage.getItem('lensync_token');
+    }
+  }
+
+  public setToken(token: string | null) {
+    this.token = token;
+    if (typeof window !== 'undefined') {
+      if (token) {
+        localStorage.setItem('lensync_token', token);
+      } else {
+        localStorage.removeItem('lensync_token');
+      }
+    }
+  }
+
+  public getToken(): string | null {
+    if (!this.token && typeof window !== 'undefined') {
+      this.token = localStorage.getItem('lensync_token');
+    }
+    return this.token;
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -108,17 +147,65 @@ export class C2CClient {
       ...(options.headers as Record<string, string>),
     };
 
+    const token = this.getToken();
+    if (token && !headers['Authorization']) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       ...options,
       headers,
     });
 
     if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`API Error [${response.status}]: ${errorBody}`);
+      let errorMessage = `API Error [${response.status}]`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.error) {
+          errorMessage = errorJson.error;
+        } else if (errorJson.message) {
+          errorMessage = errorJson.message;
+        }
+      } catch {
+        const errorBody = await response.text();
+        if (errorBody) errorMessage = errorBody;
+      }
+      throw new Error(errorMessage);
     }
 
     return response.json();
+  }
+
+  public async login(payload: { email: string; password: string }): Promise<AuthResponse> {
+    const res = await this.request<AuthResponse>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    if (res.token) {
+      this.setToken(res.token);
+    }
+    return res;
+  }
+
+  public async signUp(payload: {
+    full_name: string;
+    email: string;
+    password: string;
+    studio_name?: string;
+    role?: string;
+  }): Promise<AuthResponse> {
+    const res = await this.request<AuthResponse>('/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    if (res.token) {
+      this.setToken(res.token);
+    }
+    return res;
+  }
+
+  public async getMe(): Promise<{ user: AuthUser }> {
+    return this.request<{ user: AuthUser }>('/auth/me');
   }
 
   public async getHealth() {

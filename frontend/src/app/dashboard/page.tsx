@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Camera,
   Radio,
@@ -15,25 +16,29 @@ import {
   CheckCircle2,
   AlertTriangle,
   Clock,
-  HardDrive,
   Copy,
-  ChevronDown,
   Sparkles,
   Info,
   Check,
   ExternalLink,
-  Cloud
+  Cloud,
+  LogOut,
 } from 'lucide-react';
+import { useAuth } from '@/features/auth/AuthContext';
 import {
   c2cClient,
   ShootSession,
   ProjectRecord,
   AgentStatusResponse,
   QueueTask,
-  PhotoRecord
+  PhotoRecord,
 } from '@/lib/api-client';
+import { Button, Badge, Card } from '@/components/design-system';
 
 export default function PhotographerDashboard() {
+  const router = useRouter();
+  const { user, logout } = useAuth();
+
   // Session & Project State
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [sessions, setSessions] = useState<ShootSession[]>([]);
@@ -219,64 +224,113 @@ export default function PhotographerDashboard() {
   const duplicateSkippedCount = queueTasks.filter((t) => t.status === 'duplicate_skipped').length;
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-800 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
-      {/* 1. Modern Glass Header Bar (Light Mode) */}
-      <header className="h-16 border-b border-slate-200/80 bg-white/85 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-30 shadow-[0_1px_3px_0_rgba(0,0,0,0.03)]">
+    <div className="min-h-screen bg-gray-50/50 text-gray-900 flex flex-col font-sans selection:bg-indigo-600 selection:text-white">
+      {/* 1. Header Bar — Untitled UI Glass Header */}
+      <header className="h-16 border-b border-gray-200/80 bg-white/95 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs">
         <div className="flex items-center gap-4">
-          <Link
-            href="/"
-            className="flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-all shadow-xs"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Kembali ke Beranda</span>
+          <Link href="/">
+            <Button
+              variant="secondary"
+              size="sm"
+              iconLeading={<ArrowLeft className="w-3.5 h-3.5" />}
+            >
+              Kembali ke Beranda
+            </Button>
           </Link>
 
-          <div className="h-4 w-px bg-slate-200" />
+          <div className="h-4 w-px bg-gray-200" />
 
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-xs">
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-xs">
                 <Camera className="w-4 h-4" />
               </div>
-              <span className="font-bold text-sm text-slate-900 tracking-tight">
+              <span className="font-semibold text-sm text-gray-900 tracking-tight">
                 {activeSessionObj ? activeSessionObj.title : 'Live Shoot Session'}
               </span>
             </div>
 
-            {/* Sync Status Badge (Light Mode Pills) */}
-            {isSyncActive ? (
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-xs">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block" />
-                LIVE TETHER SYNCING
-              </span>
-            ) : isAgentOnline ? (
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/80 shadow-xs">
-                <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
-                SYNC PAUSED (READY)
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200/80 shadow-xs">
-                <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />
-                AGENT OFFLINE
-              </span>
-            )}
+            {/* Sync Status Badge — Untitled UI Badge */}
+            <Badge
+              variant={isSyncActive ? 'success' : isAgentOnline ? 'warning' : 'error'}
+              dot={true}
+              size="md"
+            >
+              {isSyncActive
+                ? 'LIVE TETHER SYNCING'
+                : isAgentOnline
+                ? 'SYNC PAUSED (READY)'
+                : 'AGENT OFFLINE'}
+            </Badge>
           </div>
         </div>
 
         {/* Right Header Status */}
         <div className="flex items-center gap-3">
-          <div className="text-xs font-medium text-emerald-800 bg-emerald-50/90 px-3 py-1.5 rounded-lg border border-emerald-200/80 flex items-center gap-2 shadow-xs">
-            <Cloud className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Google Drive: {gdriveStatus?.authenticated ? 'Cloud Sync Online' : 'Resumable Ingest Active'}</span>
-          </div>
+          <Badge
+            variant="success"
+            size="md"
+            iconLeading={<Cloud className="w-3.5 h-3.5" />}
+            className="hidden sm:inline-flex"
+          >
+            Google Drive: {gdriveStatus?.authenticated ? 'Cloud Sync Online' : 'Resumable Ingest Active'}
+          </Badge>
 
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={fetchData}
             title="Refresh data"
-            className="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-all shadow-xs"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-          </button>
+            aria-label="Refresh data"
+            iconLeading={<RefreshCw className={`w-3.5 h-3.5 ${isActionLoading ? 'animate-spin' : ''}`} />}
+          />
+
+          {/* User Profile & Logout */}
+          {user ? (
+            <div className="flex items-center gap-3 pl-3 border-l border-gray-200">
+              <div className="flex items-center gap-2">
+                {user.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt={user.full_name}
+                    className="w-8 h-8 rounded-full object-cover border border-gray-200 shadow-xs"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 flex items-center justify-center font-bold text-xs shadow-xs">
+                    {user.full_name?.charAt(0) || 'U'}
+                  </div>
+                )}
+                <div className="hidden md:block text-left">
+                  <div className="text-xs font-semibold text-gray-900 leading-tight truncate max-w-[140px]">
+                    {user.full_name}
+                  </div>
+                  <div className="text-[11px] text-gray-500 capitalize truncate max-w-[140px]">
+                    {user.studio_name || user.role}
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                variant="tertiary"
+                size="sm"
+                onClick={() => {
+                  logout();
+                  router.push('/login');
+                }}
+                title="Keluar dari akun (Logout)"
+                aria-label="Logout"
+                iconLeading={<LogOut className="w-3.5 h-3.5 text-gray-500 hover:text-rose-600" />}
+              >
+                <span className="hidden sm:inline">Keluar</span>
+              </Button>
+            </div>
+          ) : (
+            <Link href="/login">
+              <Button variant="primary" size="sm">
+                Masuk
+              </Button>
+            </Link>
+          )}
         </div>
       </header>
 
@@ -284,58 +338,60 @@ export default function PhotographerDashboard() {
       <main className="flex-1 p-6 max-w-7xl mx-auto w-full space-y-6">
         {/* Flash Message Banner */}
         {actionMessage && (
-          <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 flex items-center justify-between text-xs text-indigo-900 shadow-xs">
-            <div className="flex items-center gap-2">
+          <div className="bg-indigo-50/80 border border-indigo-200/80 rounded-xl px-4 py-3 flex items-center justify-between text-xs text-indigo-900 shadow-xs">
+            <div className="flex items-center gap-2.5">
               <Info className="w-4 h-4 text-indigo-600 shrink-0" />
               <span className="font-medium">{actionMessage}</span>
             </div>
             <button
               onClick={() => setActionMessage(null)}
-              className="text-slate-400 hover:text-slate-700 font-mono text-xs ml-4"
+              className="text-gray-400 hover:text-gray-700 font-mono text-xs ml-4"
             >
               ✕
             </button>
           </div>
         )}
 
-        {/* 3. Modern Control Panel: Tether Source, Session Selection, Adapter & Start/Stop */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-6 space-y-5 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.05)] relative overflow-hidden">
-          {/* Top Gradient Stripe */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-sky-500 to-emerald-500" />
+        {/* 3. Untitled UI Control Panel Card */}
+        <Card variant="default" padding="lg" className="space-y-6 relative overflow-hidden border border-gray-200/80 shadow-xs">
+          {/* Top Subtle Indigo Accent */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-indigo-600" />
 
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 border-b border-gray-100 pb-5">
             <div>
-              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+              <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
                   <Radio className="w-4 h-4" />
                 </div>
                 <span>Kontrol Sinkronisasi Kamera ke Google Drive</span>
               </h2>
-              <p className="text-xs text-slate-500 mt-1 pl-9">
+              <p className="text-xs text-gray-500 mt-1 pl-10.5">
                 Local Sync Agent (Go) memantau hotfolder tethering kamera, memvalidasi file selesai ditulis, dan mengunggah langsung ke Google Drive via Google Drive v3 Resumable Upload protocol.
               </p>
             </div>
 
-            {/* Big Action Button: Start / Stop */}
-            <div className="flex items-center gap-2 pl-9 lg:pl-0">
+            {/* Start / Stop Button */}
+            <div className="flex items-center gap-2 pl-10.5 lg:pl-0">
               {isSyncActive ? (
-                <button
+                <Button
+                  variant="destructive"
+                  size="md"
                   onClick={handleStopSync}
-                  disabled={isActionLoading}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs transition-all shadow-sm hover:shadow active:scale-95 disabled:opacity-50"
+                  isLoading={isActionLoading}
+                  iconLeading={<Square className="w-3.5 h-3.5 fill-current" />}
                 >
-                  <Square className="w-3.5 h-3.5 fill-current" />
-                  <span>{isActionLoading ? 'Memproses...' : 'Hentikan Sync (Pause)'}</span>
-                </button>
+                  Hentikan Sync (Pause)
+                </Button>
               ) : (
-                <button
+                <Button
+                  variant="primary"
+                  size="md"
                   onClick={handleStartSync}
-                  disabled={isActionLoading}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition-all shadow-sm hover:shadow-indigo-500/25 active:scale-95 disabled:opacity-50"
+                  isLoading={isActionLoading}
+                  iconLeading={<Play className="w-3.5 h-3.5 fill-current" />}
                 >
-                  <Play className="w-3.5 h-3.5 fill-current" />
-                  <span>{isActionLoading ? 'Memproses...' : 'Mulai Sync (Start Tether)'}</span>
-                </button>
+                  Mulai Sync (Start Tether)
+                </Button>
               )}
             </div>
           </div>
@@ -344,7 +400,7 @@ export default function PhotographerDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-1">
             {/* Control A: Folder Sumber Hotfolder */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+              <label className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
                 <Folder className="w-3.5 h-3.5 text-indigo-600" />
                 <span>Folder Sumber Foto (Hotfolder)</span>
               </label>
@@ -356,26 +412,28 @@ export default function PhotographerDashboard() {
                     setWatchPath(e.target.value);
                     setIsEditingPath(true);
                   }}
-                  className="flex-1 bg-slate-50 hover:bg-white border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 rounded-xl px-3.5 py-2 text-xs font-mono text-slate-800 focus:outline-none transition-all shadow-xs"
+                  className="flex-1 rounded-lg border border-gray-300 text-xs font-mono text-gray-900 bg-white placeholder:text-gray-400 hover:border-gray-400 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 py-2 px-3.5 shadow-xs transition-colors focus:outline-none"
                   placeholder="./sample_hotfolder"
                 />
                 {isEditingPath && (
-                  <button
+                  <Button
+                    variant="primary"
+                    size="sm"
                     onClick={handleSaveConfig}
-                    className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs"
+                    isLoading={isActionLoading}
                   >
                     Simpan
-                  </button>
+                  </Button>
                 )}
               </div>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-gray-500">
                 Folder output software tethering (Capture One, EOS Utility, Sony Imaging Edge, atau DCIM).
               </p>
             </div>
 
             {/* Control B: Pilihan Sesi & Proyek Aktif */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+              <label className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
                 <Layers className="w-3.5 h-3.5 text-indigo-600" />
                 <span>Proyek & Sesi Foto Aktif</span>
               </label>
@@ -385,7 +443,7 @@ export default function PhotographerDashboard() {
                   setSelectedSessionId(e.target.value);
                   c2cClient.updateAgentConfig({ session_id: e.target.value });
                 }}
-                className="w-full bg-slate-50 hover:bg-white border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 rounded-xl px-3.5 py-2 text-xs font-medium text-slate-800 focus:outline-none transition-all shadow-xs"
+                className="w-full rounded-lg border border-gray-300 text-xs font-medium text-gray-900 bg-white hover:border-gray-400 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 py-2 px-3.5 shadow-xs transition-colors focus:outline-none"
               >
                 {sessions.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -393,14 +451,14 @@ export default function PhotographerDashboard() {
                   </option>
                 ))}
               </select>
-              <p className="text-[11px] text-slate-400">
-                Foto akan dialokasikan ke folder sesi Google Drive: <code className="text-emerald-600 font-semibold font-mono">Shoot - {activeSessionObj?.title || 'Session'}</code>.
+              <p className="text-[11px] text-gray-500">
+                Foto akan dialokasikan ke folder sesi Google Drive: <code className="text-emerald-700 font-semibold font-mono">Shoot - {activeSessionObj?.title || 'Session'}</code>.
               </p>
             </div>
 
             {/* Control C: Arsitektur Adapter Kamera */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+              <label className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
                 <Camera className="w-3.5 h-3.5 text-indigo-600" />
                 <span>Camera Adapter (Pluggable)</span>
               </label>
@@ -410,7 +468,7 @@ export default function PhotographerDashboard() {
                   setSelectedAdapterId(e.target.value);
                   c2cClient.updateAgentConfig({ adapter_id: e.target.value });
                 }}
-                className="w-full bg-slate-50 hover:bg-white border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 rounded-xl px-3.5 py-2 text-xs font-medium text-slate-800 focus:outline-none transition-all shadow-xs"
+                className="w-full rounded-lg border border-gray-300 text-xs font-medium text-gray-900 bg-white hover:border-gray-400 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 py-2 px-3.5 shadow-xs transition-colors focus:outline-none"
               >
                 <option value="adapter-hotfolder-tether">
                   Hotfolder Ingestion (Capture One / EOS Utility / DCIM)
@@ -428,179 +486,176 @@ export default function PhotographerDashboard() {
                   Nikon Camera Control SDK
                 </option>
               </select>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-gray-500">
                 Arsitektur adapter modular memungkinkan integrasi SDK kamera langsung di masa depan.
               </p>
             </div>
           </div>
 
-          {/* Google Drive Destination Highlight Banner (Light Mode) */}
-          <div className="mt-3 bg-gradient-to-r from-emerald-50/80 to-sky-50/60 border border-emerald-200/70 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs shadow-xs">
+          {/* Google Drive Destination Highlight Banner */}
+          <div className="mt-2 bg-emerald-50/60 border border-emerald-200/80 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs shadow-xs">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-emerald-100/80 border border-emerald-200 flex items-center justify-center text-emerald-700 shadow-xs">
                 <Cloud className="w-4 h-4" />
               </div>
               <div>
-                <span className="font-semibold text-slate-700">Google Drive Destination: </span>
+                <span className="font-semibold text-gray-700">Google Drive Destination: </span>
                 <span className="font-mono text-emerald-700 font-bold">
                   {gdriveStatus?.target_folder_name || `Shoot - ${activeSessionObj?.title || 'Paris Fashion Week Runway Shoot'}`}
                 </span>
-                <span className="text-[11px] text-slate-400 ml-2 font-mono">
+                <span className="text-[11px] text-gray-500 ml-2 font-mono">
                   (Parent ID: {gdriveStatus?.root_folder_id || 'lensync-c2c-master-root'})
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] text-slate-500 font-medium">Protokol:</span>
-              <span className="px-2.5 py-1 rounded-md bg-white border border-emerald-200 text-emerald-800 font-mono text-[10px] font-semibold flex items-center gap-1 shadow-xs">
-                <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Google Drive v3 Resumable Stream
-              </span>
-            </div>
+            <Badge variant="success" size="sm" iconLeading={<CheckCircle2 className="w-3 h-3 text-emerald-600" />}>
+              Google Drive v3 Resumable Stream
+            </Badge>
           </div>
-        </div>
+        </Card>
 
-        {/* 4. Metric Cards (Modern Light Cards with Soft Shadows) */}
+        {/* 4. Metric Cards — Untitled UI Stat Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.04)] hover:shadow-md transition-all">
+          <Card variant="default" padding="md" className="hover:shadow-sm transition-all border border-gray-200/80">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500">Total Foto Masuk</span>
-              <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                <Camera className="w-3.5 h-3.5" />
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Foto Masuk</span>
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-xs">
+                <Camera className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl font-extrabold text-slate-900 mt-2">
+            <div className="text-3xl font-extrabold text-gray-900 mt-2 tracking-tight">
               {totalCompleted + inQueueCount}
             </div>
-            <div className="text-[11px] text-slate-400 mt-1">Disinkronkan dari tethering kamera</div>
-          </div>
+            <div className="text-xs text-gray-500 mt-1 font-medium">Disinkronkan dari tethering kamera</div>
+          </Card>
 
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.04)] hover:shadow-md transition-all">
+          <Card variant="default" padding="md" className="hover:shadow-sm transition-all border border-gray-200/80">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500">Tersimpan di Google Drive</span>
-              <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                <Cloud className="w-3.5 h-3.5" />
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tersimpan di Drive</span>
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-xs">
+                <Cloud className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl font-extrabold text-emerald-600 mt-2">
+            <div className="text-3xl font-extrabold text-emerald-600 mt-2 tracking-tight">
               {totalCompleted}
             </div>
-            <div className="text-[11px] text-emerald-600/80 font-medium mt-1">Google Drive Resumable Stream OK</div>
-          </div>
+            <div className="text-xs text-emerald-700 font-medium mt-1">Google Drive Resumable Stream OK</div>
+          </Card>
 
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.04)] hover:shadow-md transition-all">
+          <Card variant="default" padding="md" className="hover:shadow-sm transition-all border border-gray-200/80">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500">Antrean Upload Aktif</span>
-              <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-                <Clock className="w-3.5 h-3.5" />
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Antrean Upload Aktif</span>
+              <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shadow-xs">
+                <Clock className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl font-extrabold text-amber-600 mt-2">
+            <div className="text-3xl font-extrabold text-amber-600 mt-2 tracking-tight">
               {inQueueCount}
             </div>
-            <div className="text-[11px] text-slate-400 mt-1">Antrean persisten (crash-safe)</div>
-          </div>
+            <div className="text-xs text-gray-500 mt-1 font-medium">Antrean persisten (crash-safe)</div>
+          </Card>
 
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.04)] hover:shadow-md transition-all">
+          <Card variant="default" padding="md" className="hover:shadow-sm transition-all border border-gray-200/80">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500">Duplikat Dicegah / Retrying</span>
-              <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center">
-                <Sparkles className="w-3.5 h-3.5" />
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Deduplikasi & Retry</span>
+              <div className="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center shadow-xs">
+                <Sparkles className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl font-extrabold text-sky-600 mt-2">
+            <div className="text-3xl font-extrabold text-sky-600 mt-2 tracking-tight">
               {duplicateSkippedCount + retryingCount}
             </div>
-            <div className="text-[11px] text-slate-400 mt-1">Deduplikasi SHA-256 & backoff</div>
-          </div>
+            <div className="text-xs text-gray-500 mt-1 font-medium">Deduplikasi SHA-256 & backoff</div>
+          </Card>
         </div>
 
         {/* 5. Two-column Layout: Upload Queue & Live Gallery */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Column: Persistent Upload Queue (5 cols) */}
-          <div className="lg:col-span-5 bg-white border border-slate-200/90 rounded-2xl overflow-hidden flex flex-col h-[560px] shadow-[0_2px_12px_-4px_rgba(0,0,0,0.05)]">
-            <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <UploadCloud className="w-4 h-4 text-indigo-600" />
-                <h3 className="font-bold text-sm text-slate-900">Antrean Upload Persisten</h3>
+          <Card
+            variant="default"
+            padding="none"
+            className="lg:col-span-5 flex flex-col h-[580px] overflow-hidden border border-gray-200/80 shadow-xs"
+          >
+            <div className="px-5 py-4 border-b border-gray-200/80 bg-gray-50/50 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                  <UploadCloud className="w-4 h-4" />
+                </div>
+                <h3 className="font-semibold text-sm text-gray-900">Antrean Upload Persisten</h3>
               </div>
-              <span className="text-xs font-mono font-medium text-slate-500 bg-white border border-slate-200 px-2.5 py-0.5 rounded-full shadow-xs">
+              <Badge variant="gray" size="sm">
                 {queueTasks.length} total tasks
-              </span>
+              </Badge>
             </div>
 
-            <div className="flex-1 divide-y divide-slate-100 overflow-y-auto">
+            <div className="flex-1 divide-y divide-gray-100 overflow-y-auto">
               {queueTasks.length === 0 ? (
-                <div className="p-12 text-center text-slate-400 text-xs space-y-2">
-                  <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto text-slate-400 mb-2">
+                <div className="p-12 text-center text-gray-400 text-xs space-y-2">
+                  <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto text-gray-400 mb-2">
                     <UploadCloud className="w-6 h-6" />
                   </div>
-                  <p className="font-medium text-slate-600">Belum ada foto dalam antrean upload.</p>
-                  <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
+                  <p className="font-medium text-gray-600">Belum ada foto dalam antrean upload.</p>
+                  <p className="text-[11px] text-gray-400 max-w-xs mx-auto">
                     Kamera yang memotret ke folder <code className="text-indigo-600 font-mono font-semibold">{watchPath}</code> akan otomatis masuk ke sini.
                   </p>
                 </div>
               ) : (
                 queueTasks.map((t) => (
-                  <div key={t.id} className="p-3.5 hover:bg-slate-50/80 transition-colors">
+                  <div key={t.id} className="p-4 hover:bg-gray-50/80 transition-colors">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-semibold text-slate-900 truncate">
+                          <span className="font-mono text-xs font-semibold text-gray-900 truncate">
                             {t.photo.file_name}
                           </span>
-                          <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                          <Badge variant="gray" size="sm">
                             {t.photo.extension.toUpperCase()}
-                          </span>
+                          </Badge>
                         </div>
-                        <div className="text-[11px] text-slate-500 font-mono mt-1 flex items-center gap-3">
+                        <div className="text-[11px] text-gray-500 font-mono mt-1 flex items-center gap-3">
                           <span>{(t.photo.size_bytes / (1024 * 1024)).toFixed(1)} MB</span>
-                          <span className="text-slate-400">SHA: {t.id.slice(0, 8)}</span>
+                          <span className="text-gray-400">SHA: {t.id.slice(0, 8)}</span>
                         </div>
                       </div>
 
-                      {/* Status Badges (Light Mode) */}
+                      {/* Status Badges — Untitled UI Badges */}
                       <div className="shrink-0">
                         {t.status === 'completed' && (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full shadow-xs">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                            <span>Uploaded (Drive)</span>
-                          </span>
+                          <Badge variant="success" size="sm" iconLeading={<CheckCircle2 className="w-3 h-3 text-emerald-600" />}>
+                            Uploaded (Drive)
+                          </Badge>
                         )}
                         {t.status === 'processing' && (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full animate-pulse shadow-xs">
-                            <RefreshCw className="w-3 h-3 animate-spin text-indigo-600" />
-                            <span>Uploading Drive</span>
-                          </span>
+                          <Badge variant="indigo" size="sm" iconLeading={<RefreshCw className="w-3 h-3 animate-spin text-indigo-600" />}>
+                            Uploading Drive
+                          </Badge>
                         )}
                         {t.status === 'queued' && (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full shadow-xs">
-                            <Clock className="w-3 h-3 text-amber-600" />
-                            <span>Queued</span>
-                          </span>
+                          <Badge variant="warning" size="sm" iconLeading={<Clock className="w-3 h-3 text-amber-600" />}>
+                            Queued
+                          </Badge>
                         )}
                         {t.status === 'retrying' && (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-orange-700 bg-orange-50 border border-orange-200 px-2.5 py-0.5 rounded-full shadow-xs">
-                            <RefreshCw className="w-3 h-3 text-orange-600" />
-                            <span>Retry #{t.retry_count}</span>
-                          </span>
+                          <Badge variant="warning" size="sm" iconLeading={<RefreshCw className="w-3 h-3 text-amber-600" />}>
+                            Retry #{t.retry_count}
+                          </Badge>
                         )}
                         {t.status === 'duplicate_skipped' && (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full shadow-xs">
-                            <Sparkles className="w-3 h-3 text-indigo-500" />
-                            <span>Deduplicated</span>
-                          </span>
+                          <Badge variant="gray" size="sm" iconLeading={<Sparkles className="w-3 h-3 text-indigo-500" />}>
+                            Deduplicated
+                          </Badge>
                         )}
                         {t.status === 'failed' && (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-full shadow-xs">
-                            <AlertTriangle className="w-3 h-3 text-rose-600" />
-                            <span>Failed</span>
-                          </span>
+                          <Badge variant="error" size="sm" iconLeading={<AlertTriangle className="w-3 h-3 text-rose-600" />}>
+                            Failed
+                          </Badge>
                         )}
                       </div>
                     </div>
 
                     {t.error_message && (
-                      <p className="text-[11px] text-rose-600 font-mono mt-1.5 truncate bg-rose-50 p-1.5 rounded-md border border-rose-100">
+                      <p className="text-[11px] text-rose-600 font-mono mt-2 truncate bg-rose-50 p-2 rounded-lg border border-rose-100">
                         Err: {t.error_message}
                       </p>
                     )}
@@ -608,28 +663,32 @@ export default function PhotographerDashboard() {
                 ))
               )}
             </div>
-          </div>
+          </Card>
 
           {/* Right Column: Live Photo Gallery & EXIF Inspector (7 cols) */}
-          <div className="lg:col-span-7 bg-white border border-slate-200/90 rounded-2xl overflow-hidden flex flex-col h-[560px] shadow-[0_2px_12px_-4px_rgba(0,0,0,0.05)]">
-            <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
+          <Card
+            variant="default"
+            padding="none"
+            className="lg:col-span-7 flex flex-col h-[580px] overflow-hidden border border-gray-200/80 shadow-xs"
+          >
+            <div className="px-5 py-4 border-b border-gray-200/80 bg-gray-50/50 flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-sm text-slate-900">Live Ingestion Gallery</h3>
-                <p className="text-[11px] text-slate-500">Foto masuk langsung dari kamera dan tersinkron ke Google Drive</p>
+                <h3 className="font-semibold text-sm text-gray-900">Live Ingestion Gallery</h3>
+                <p className="text-[11px] text-gray-500">Foto masuk langsung dari kamera dan tersinkron ke Google Drive</p>
               </div>
-              <span className="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full shadow-xs">
+              <Badge variant="success" size="sm">
                 {photos.length} foto di Drive
-              </span>
+              </Badge>
             </div>
 
             <div className="flex-1 p-5 overflow-y-auto">
               {photos.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs space-y-2">
-                  <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mb-2">
+                <div className="h-full flex flex-col items-center justify-center text-gray-400 text-xs space-y-2">
+                  <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-400 mb-2">
                     <Camera className="w-7 h-7" />
                   </div>
-                  <p className="font-medium text-slate-600">Belum ada foto yang tersimpan di Google Drive untuk sesi ini.</p>
-                  <p className="text-[11px] text-slate-400">Ambil foto melalui tethering kamera untuk memulai sinkronisasi.</p>
+                  <p className="font-medium text-gray-600">Belum ada foto yang tersimpan di Google Drive untuk sesi ini.</p>
+                  <p className="text-[11px] text-gray-400">Ambil foto melalui tethering kamera untuk memulai sinkronisasi.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -637,14 +696,14 @@ export default function PhotographerDashboard() {
                     <div
                       key={p.id}
                       onClick={() => setSelectedPhoto(p)}
-                      className={`group relative bg-white border rounded-xl overflow-hidden cursor-pointer transition-all duration-200 shadow-xs hover:shadow-md ${
+                      className={`group relative bg-white border rounded-xl overflow-hidden cursor-pointer transition-all duration-200 shadow-xs hover:shadow-sm ${
                         selectedPhoto?.id === p.id
                           ? 'border-indigo-600 ring-2 ring-indigo-500/20 shadow-md'
-                          : 'border-slate-200 hover:border-indigo-300'
+                          : 'border-gray-200/80 hover:border-indigo-300'
                       }`}
                     >
                       {/* Image Thumbnail / Card Header with Fast RAW Preview */}
-                      <div className="aspect-[4/3] bg-gradient-to-br from-slate-100 via-slate-50 to-indigo-50/30 relative overflow-hidden flex items-center justify-center">
+                      <div className="aspect-[4/3] bg-gradient-to-br from-gray-100 via-gray-50 to-indigo-50/20 relative overflow-hidden flex items-center justify-center">
                         {p.preview_url ? (
                           <img
                             src={p.preview_url.startsWith('http') ? p.preview_url : `http://localhost:8080${p.preview_url}`}
@@ -652,19 +711,22 @@ export default function PhotographerDashboard() {
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                         ) : (
-                          <Camera className="w-8 h-8 text-slate-300 group-hover:scale-110 group-hover:text-indigo-400 transition-all duration-300" />
+                          <Camera className="w-8 h-8 text-gray-300 group-hover:scale-110 group-hover:text-indigo-400 transition-all duration-300" />
                         )}
 
                         {/* Format Badge */}
                         <div className="absolute top-2 left-2">
-                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-white/90 backdrop-blur-sm text-slate-700 border border-slate-200 shadow-xs">
+                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-white/95 backdrop-blur-sm text-gray-700 border border-gray-200 shadow-xs">
                             {p.file_format}
                           </span>
                         </div>
 
                         {/* Dual Stream Status Badge */}
                         {p.upload_status === 'preview_ready' ? (
-                          <div className="absolute top-2 right-2 bg-amber-500/90 backdrop-blur-sm text-white px-2 py-0.5 rounded-md text-[10px] font-semibold flex items-center gap-1 shadow-sm animate-pulse" title="Preview instan siap (<1s), RAW sedang diunggah ke Google Drive">
+                          <div
+                            className="absolute top-2 right-2 bg-amber-500/95 backdrop-blur-sm text-white px-2 py-0.5 rounded-md text-[10px] font-semibold flex items-center gap-1 shadow-sm"
+                            title="Preview instan siap (<1s), RAW sedang diunggah ke Google Drive"
+                          >
                             <Sparkles className="w-3 h-3 text-yellow-200" />
                             <span>Preview Siap</span>
                           </div>
@@ -677,10 +739,10 @@ export default function PhotographerDashboard() {
 
                       {/* Photo Metadata Footer */}
                       <div className="p-3 text-xs">
-                        <p className="font-bold text-slate-900 truncate text-[11px]">
+                        <p className="font-semibold text-gray-900 truncate text-[11px]">
                           {p.original_filename}
                         </p>
-                        <p className="text-[10px] text-slate-500 mt-0.5 truncate font-medium">
+                        <p className="text-[10px] text-gray-500 mt-0.5 truncate font-medium">
                           {p.camera_model || 'Sony α7 IV'}
                         </p>
 
@@ -697,7 +759,7 @@ export default function PhotographerDashboard() {
                             <span>Buka di Google Drive</span>
                           </a>
                         ) : (
-                          <div className="mt-2 pt-1.5 border-t border-slate-100 flex justify-between text-[10px] text-slate-500 font-mono">
+                          <div className="mt-2 pt-1.5 border-t border-gray-100 flex justify-between text-[10px] text-gray-500 font-mono">
                             <span>{(p.file_size_bytes / (1024 * 1024)).toFixed(1)} MB</span>
                             <span className="text-amber-600 font-medium">Syncing RAW...</span>
                           </div>
@@ -709,13 +771,13 @@ export default function PhotographerDashboard() {
               )}
             </div>
 
-            {/* Selected Photo EXIF Drawer (Light Mode with Instant Preview) */}
+            {/* Selected Photo EXIF Drawer */}
             {selectedPhoto && (
-              <div className="border-t border-slate-200 bg-slate-50/95 backdrop-blur-sm p-4 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-[0_-2px_10px_rgba(0,0,0,0.03)]">
+              <div className="border-t border-gray-200/80 bg-gray-50/80 backdrop-blur-sm p-4 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
                 <div className="flex items-start gap-4">
                   {/* Photo Preview Mini-Thumbnail in Drawer */}
                   {selectedPhoto.preview_url && (
-                    <div className="w-20 h-16 rounded-lg overflow-hidden border border-slate-200 shadow-xs shrink-0 bg-slate-100">
+                    <div className="w-20 h-16 rounded-lg overflow-hidden border border-gray-200 shadow-xs shrink-0 bg-gray-100">
                       <img
                         src={selectedPhoto.preview_url.startsWith('http') ? selectedPhoto.preview_url : `http://localhost:8080${selectedPhoto.preview_url}`}
                         alt={selectedPhoto.original_filename}
@@ -726,30 +788,30 @@ export default function PhotographerDashboard() {
 
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-900 text-sm">{selectedPhoto.original_filename}</span>
+                      <span className="font-semibold text-gray-900 text-sm">{selectedPhoto.original_filename}</span>
                       {selectedPhoto.upload_status === 'preview_ready' ? (
-                        <span className="text-amber-800 bg-amber-50 border border-amber-200 text-[11px] font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs animate-pulse">
-                          <Sparkles className="w-3 h-3 text-amber-600" /> Preview Siap (RAW Mengunggah...)
-                        </span>
+                        <Badge variant="warning" size="sm" iconLeading={<Sparkles className="w-3 h-3 text-amber-600" />}>
+                          Preview Siap (RAW Mengunggah...)
+                        </Badge>
                       ) : (
-                        <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 text-[11px] font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" /> RAW Terkonfirmasi di Google Drive
-                        </span>
+                        <Badge variant="success" size="sm" iconLeading={<CheckCircle2 className="w-3 h-3 text-emerald-600" />}>
+                          RAW Terkonfirmasi di Google Drive
+                        </Badge>
                       )}
                     </div>
-                    <div className="text-[11px] text-slate-600 flex flex-wrap gap-x-3 gap-y-1">
-                      <span className="bg-white px-2 py-0.5 rounded border border-slate-200 shadow-xs">Kamera: {selectedPhoto.camera_make} {selectedPhoto.camera_model}</span>
-                      <span className="bg-white px-2 py-0.5 rounded border border-slate-200 shadow-xs">Lensa: {selectedPhoto.lens_model || 'FE 24-70mm F2.8 GM II'}</span>
-                      <span className="bg-white px-2 py-0.5 rounded border border-slate-200 shadow-xs">Aperture: {selectedPhoto.aperture_f_stop ? `f/${selectedPhoto.aperture_f_stop}` : 'f/2.8'}</span>
-                      <span className="bg-white px-2 py-0.5 rounded border border-slate-200 shadow-xs">Shutter: {selectedPhoto.shutter_speed_str || '1/500s'}</span>
-                      <span className="bg-white px-2 py-0.5 rounded border border-slate-200 shadow-xs">ISO: {selectedPhoto.iso_speed || 100}</span>
+                    <div className="text-[11px] text-gray-600 flex flex-wrap gap-x-2 gap-y-1">
+                      <span className="bg-white px-2 py-0.5 rounded-md border border-gray-200 shadow-xs">Kamera: {selectedPhoto.camera_make} {selectedPhoto.camera_model}</span>
+                      <span className="bg-white px-2 py-0.5 rounded-md border border-gray-200 shadow-xs">Lensa: {selectedPhoto.lens_model || 'FE 24-70mm F2.8 GM II'}</span>
+                      <span className="bg-white px-2 py-0.5 rounded-md border border-gray-200 shadow-xs">Aperture: {selectedPhoto.aperture_f_stop ? `f/${selectedPhoto.aperture_f_stop}` : 'f/2.8'}</span>
+                      <span className="bg-white px-2 py-0.5 rounded-md border border-gray-200 shadow-xs">Shutter: {selectedPhoto.shutter_speed_str || '1/500s'}</span>
+                      <span className="bg-white px-2 py-0.5 rounded-md border border-gray-200 shadow-xs">ISO: {selectedPhoto.iso_speed || 100}</span>
                     </div>
-                    <div className="text-[11px] text-slate-500 flex flex-wrap items-center gap-3">
-                      <span>Drive File ID: <code className="text-emerald-700 font-bold font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">{selectedPhoto.gdrive_file_id || 'syncing_in_background...'}</code></span>
+                    <div className="text-[11px] text-gray-500 flex flex-wrap items-center gap-3">
+                      <span>Drive File ID: <code className="text-emerald-700 font-bold font-mono bg-white px-1.5 py-0.5 rounded border border-gray-200">{selectedPhoto.gdrive_file_id || 'syncing_in_background...'}</code></span>
                       <span>SHA-256: <code className="font-mono">{selectedPhoto.sha256_hash.slice(0, 16)}...</code></span>
                       <button
                         onClick={() => handleCopyHash(selectedPhoto.sha256_hash)}
-                        className="hover:text-slate-900 text-slate-500 flex items-center gap-1"
+                        className="hover:text-gray-900 text-gray-500 flex items-center gap-1"
                       >
                         {copiedHash ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
                       </button>
@@ -763,22 +825,27 @@ export default function PhotographerDashboard() {
                       href={selectedPhoto.gdrive_view_link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition-all shadow-sm hover:shadow"
                     >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      <span>Buka di Google Drive</span>
+                      <Button
+                        variant="success"
+                        size="sm"
+                        iconLeading={<ExternalLink className="w-3.5 h-3.5" />}
+                      >
+                        Buka di Google Drive
+                      </Button>
                     </a>
                   )}
-                  <button
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={() => setSelectedPhoto(null)}
-                    className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 font-semibold text-xs shadow-xs transition-colors"
                   >
                     Tutup Info
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
-          </div>
+          </Card>
         </div>
       </main>
     </div>

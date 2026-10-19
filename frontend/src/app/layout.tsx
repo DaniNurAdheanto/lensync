@@ -6,6 +6,8 @@ export const metadata: Metadata = {
   description: 'Otomatis upload foto dari kamera DSLR/Mirrorless & smartphone melalui USB tethering langsung ke Cloud Storage.',
 };
 
+import { Providers } from './providers';
+
 export default function RootLayout({
   children,
 }: {
@@ -14,7 +16,7 @@ export default function RootLayout({
   return (
     <html lang="id" className="scroll-smooth">
       <body className="bg-white text-slate-900 antialiased font-sans selection:bg-indigo-500 selection:text-white">
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

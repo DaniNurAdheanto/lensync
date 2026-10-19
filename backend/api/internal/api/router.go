@@ -33,6 +33,8 @@ func SetupRouter(deps RouterDependencies) http.Handler {
 	// Base endpoints
 	mux.HandleFunc("/api/v1/health", handlers.HealthCheckHandler)
 	mux.HandleFunc("/api/v1/auth/login", authHandler.Login)
+	mux.HandleFunc("/api/v1/auth/signup", authHandler.SignUp)
+	mux.HandleFunc("/api/v1/auth/me", authHandler.Me)
 	mux.HandleFunc("/api/v1/projects", projectHandler.ListProjects)
 	mux.HandleFunc("/api/v1/sessions", sessionHandler.HandleSessions)
 	mux.HandleFunc("/api/v1/devices/register", deviceHandler.RegisterDevice)

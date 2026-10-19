@@ -49,15 +49,15 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen bg-white">
       <Navbar
-        onOpenGetStarted={() => setIsGetStartedOpen(true)}
-        onOpenLogin={() => setIsGetStartedOpen(true)}
+        onOpenGetStarted={() => router.push('/signup')}
+        onOpenLogin={() => router.push('/login')}
         onToggleWorkbench={() => router.push('/dashboard')}
         activeSection={activeSection}
       />
 
       <main className="flex-1">
         <HeroSection
-          onStartClick={() => setIsGetStartedOpen(true)}
+          onStartClick={() => router.push('/signup')}
           onHowItWorksClick={() => {
             const el = document.getElementById('how-it-works');
             el?.scrollIntoView({ behavior: 'smooth' });
@@ -67,9 +67,9 @@ export default function LandingPage() {
         <HowItWorksSection />
         <FeaturesShowcaseSection />
         <CameraCompatibilitySection />
-        <PricingSection onSelectPlan={() => setIsGetStartedOpen(true)} />
+        <PricingSection onSelectPlan={() => router.push('/signup')} />
         <FaqSection />
-        <CtaBannerSection onStartClick={() => setIsGetStartedOpen(true)} />
+        <CtaBannerSection onStartClick={() => router.push('/signup')} />
       </main>
 
       <Footer onToggleWorkbench={() => router.push('/dashboard')} />
