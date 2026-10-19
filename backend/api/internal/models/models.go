@@ -74,6 +74,8 @@ type Photo struct {
 	S3KeyOriginal    string     `json:"s3_key_original"`
 	S3KeyPreview     *string    `json:"s3_key_preview,omitempty"`
 	S3KeyThumbnail   *string    `json:"s3_key_thumbnail,omitempty"`
+	PreviewURL       *string    `json:"preview_url,omitempty"`
+	ThumbnailURL     *string    `json:"thumbnail_url,omitempty"`
 	CameraMake       *string    `json:"camera_make,omitempty"`
 	CameraModel      *string    `json:"camera_model,omitempty"`
 	LensModel        *string    `json:"lens_model,omitempty"`
@@ -84,6 +86,9 @@ type Photo struct {
 	CapturedAt       *time.Time `json:"captured_at,omitempty"`
 	UploadStatus     string     `json:"upload_status"`
 	UploadedAt       *time.Time `json:"uploaded_at,omitempty"`
+	StorageProvider  string     `json:"storage_provider,omitempty"`
+	GDriveFileID     *string    `json:"gdrive_file_id,omitempty"`
+	GDriveViewLink   *string    `json:"gdrive_view_link,omitempty"`
 	CreatedAt        time.Time  `json:"created_at"`
 	UpdatedAt        time.Time  `json:"updated_at"`
 }

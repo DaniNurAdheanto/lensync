@@ -3,7 +3,6 @@ package watcher
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"io"
 	"log"
 	"os"

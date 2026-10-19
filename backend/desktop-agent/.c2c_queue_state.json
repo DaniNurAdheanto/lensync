@@ -1,0 +1,110 @@
+[
+  {
+    "id": "5f71b4b9407d3706ed1491cfe3eddd12989c2db183f06d95ad229ae685f8f944",
+    "photo": {
+      "file_path": "sample_hotfolder/GDRIVE_TETHER_RAW_002.ARW",
+      "file_name": "GDRIVE_TETHER_RAW_002.ARW",
+      "extension": ".arw",
+      "size_bytes": 79,
+      "sha256_hash": "5f71b4b9407d3706ed1491cfe3eddd12989c2db183f06d95ad229ae685f8f944",
+      "exif": {
+        "camera_make": "Sony",
+        "camera_model": "ILCE-7M4 (α7 IV)",
+        "lens_model": "FE 24-70mm F2.8 GM II",
+        "focal_length_mm": 50,
+        "aperture_f_stop": 2.8,
+        "shutter_speed_str": "1/500s",
+        "iso_speed": 100
+      },
+      "discovered_at": "2026-10-19T13:08:17.43219+07:00"
+    },
+    "session_id": "session-pfw-2026",
+    "status": "completed",
+    "retry_count": 0,
+    "max_retries": 5,
+    "created_at": "2026-10-19T13:08:17.432215+07:00",
+    "updated_at": "2026-10-19T13:08:17.436704+07:00",
+    "completed_at": "2026-10-19T13:08:17.436704+07:00"
+  },
+  {
+    "id": "b5039f310764716fadcc5eb145e6fc635f3aebd784b0f38a4284a1f0235a8ef4",
+    "photo": {
+      "file_path": "sample_hotfolder/DSC_0105_FAST_DUAL_STREAM.ARW",
+      "file_name": "DSC_0105_FAST_DUAL_STREAM.ARW",
+      "extension": ".arw",
+      "size_bytes": 55,
+      "sha256_hash": "b5039f310764716fadcc5eb145e6fc635f3aebd784b0f38a4284a1f0235a8ef4",
+      "exif": {
+        "camera_make": "Sony",
+        "camera_model": "ILCE-7M4 (α7 IV)",
+        "lens_model": "FE 24-70mm F2.8 GM II",
+        "focal_length_mm": 50,
+        "aperture_f_stop": 2.8,
+        "shutter_speed_str": "1/500s",
+        "iso_speed": 100
+      },
+      "discovered_at": "2026-10-19T13:27:58.856083+07:00"
+    },
+    "session_id": "session-pfw-2026",
+    "status": "completed",
+    "retry_count": 0,
+    "max_retries": 5,
+    "created_at": "2026-10-19T13:27:58.85617+07:00",
+    "updated_at": "2026-10-19T13:27:58.86728+07:00",
+    "completed_at": "2026-10-19T13:27:58.86728+07:00"
+  },
+  {
+    "id": "da5fafc22c42f90fd3685545d1a2e6d65ad77dfdcab456fd178f39d1090e6acc",
+    "photo": {
+      "file_path": "sample_hotfolder/DSC_0106_DUAL_STREAM_LIVE.ARW",
+      "file_name": "DSC_0106_DUAL_STREAM_LIVE.ARW",
+      "extension": ".arw",
+      "size_bytes": 58,
+      "sha256_hash": "da5fafc22c42f90fd3685545d1a2e6d65ad77dfdcab456fd178f39d1090e6acc",
+      "exif": {
+        "camera_make": "Sony",
+        "camera_model": "ILCE-7M4 (α7 IV)",
+        "lens_model": "FE 24-70mm F2.8 GM II",
+        "focal_length_mm": 50,
+        "aperture_f_stop": 2.8,
+        "shutter_speed_str": "1/500s",
+        "iso_speed": 100
+      },
+      "discovered_at": "2026-10-19T13:29:23.89071+07:00"
+    },
+    "session_id": "session-pfw-2026",
+    "status": "completed",
+    "retry_count": 0,
+    "max_retries": 5,
+    "created_at": "2026-10-19T13:29:23.890741+07:00",
+    "updated_at": "2026-10-19T13:29:23.903384+07:00",
+    "completed_at": "2026-10-19T13:29:23.903384+07:00"
+  },
+  {
+    "id": "64ada244a2ffb069a8e80b40fe16475d20779b162cc078d83cab2708e4ff2a61",
+    "photo": {
+      "file_path": "sample_hotfolder/DSC_0099.ARW",
+      "file_name": "DSC_0099.ARW",
+      "extension": ".arw",
+      "size_bytes": 75,
+      "sha256_hash": "64ada244a2ffb069a8e80b40fe16475d20779b162cc078d83cab2708e4ff2a61",
+      "exif": {
+        "camera_make": "Sony",
+        "camera_model": "ILCE-7M4 (α7 IV)",
+        "lens_model": "FE 24-70mm F2.8 GM II",
+        "focal_length_mm": 50,
+        "aperture_f_stop": 2.8,
+        "shutter_speed_str": "1/500s",
+        "iso_speed": 100
+      },
+      "discovered_at": "2026-10-19T12:48:32.042155+07:00"
+    },
+    "session_id": "session-pfw-2026",
+    "status": "completed",
+    "retry_count": 3,
+    "max_retries": 5,
+    "created_at": "2026-10-19T12:48:32.042189+07:00",
+    "updated_at": "2026-10-19T12:48:43.299364+07:00",
+    "completed_at": "2026-10-19T12:48:43.299364+07:00"
+  }
+]

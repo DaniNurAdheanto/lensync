@@ -1,12 +1,14 @@
 package api
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"strings"
 
 	"github.com/c2c/api/internal/api/handlers"
 	"github.com/c2c/api/internal/auth"
+	"github.com/c2c/api/internal/events"
 	"github.com/c2c/api/internal/services"
 )
 
@@ -25,6 +27,8 @@ func SetupRouter(deps RouterDependencies) http.Handler {
 	uploadHandler := handlers.NewUploadHandler(deps.PhotoService)
 	deviceHandler := handlers.NewDeviceHandler()
 	projectHandler := handlers.NewProjectHandler()
+	agentHandler := handlers.NewAgentHandler()
+	broker := events.GetBroker()
 
 	// Base endpoints
 	mux.HandleFunc("/api/v1/health", handlers.HealthCheckHandler)
@@ -34,14 +38,40 @@ func SetupRouter(deps RouterDependencies) http.Handler {
 	mux.HandleFunc("/api/v1/devices/register", deviceHandler.RegisterDevice)
 	mux.HandleFunc("/api/v1/uploads/request-presigned-url", uploadHandler.RequestPresignedURL)
 	mux.HandleFunc("/api/v1/uploads/confirm", uploadHandler.ConfirmUpload)
+	mux.HandleFunc("/api/v1/photos/fast-preview", uploadHandler.UploadFastPreview)
+	mux.HandleFunc("/api/v1/previews/", uploadHandler.ServePreview)
 	mux.HandleFunc("/api/v1/photos", photoHandler.ListPhotos)
+
+	// Real-Time SSE Stream for Next.js Dashboard
+	mux.HandleFunc("/api/v1/events", broker.SSEHandler)
+	mux.HandleFunc("/api/v1/live/stream", broker.SSEHandler)
+
+	// Local Sync Agent control endpoints
+	mux.HandleFunc("/api/v1/agent/status", agentHandler.GetStatus)
+	mux.HandleFunc("/api/v1/agent/start", agentHandler.StartSync)
+	mux.HandleFunc("/api/v1/agent/stop", agentHandler.StopSync)
+	mux.HandleFunc("/api/v1/agent/config", agentHandler.UpdateConfig)
+	mux.HandleFunc("/api/v1/agent/queue", agentHandler.GetQueue)
+
+	// S3 mock storage endpoints (for direct PUT upload when MinIO is in mock/detached mode)
+	storage := deps.PhotoService.GetStorage()
+	mux.HandleFunc("/api/v1/storage/upload/", storage.HandleMockUpload)
+	mux.HandleFunc("/api/v1/storage/file/", storage.HandleMockDownload)
+
+	// Google Drive storage endpoints
+	gdrive := deps.PhotoService.GetGDriveStorage()
+	mux.HandleFunc("/api/v1/storage/gdrive/status", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(gdrive.GetStatus())
+	})
+	mux.HandleFunc("/api/v1/storage/gdrive/upload", gdrive.HandleLocalUpload)
 
 	// Global Middleware: CORS & Logging
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// CORS headers
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, ETag")
 
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusOK)

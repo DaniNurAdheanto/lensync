@@ -1,5 +1,5 @@
 import React from 'react';
-import { CloudCheck, Image as ImageIcon, Camera, Eye } from 'lucide-react';
+import { CheckCircle2, Image as ImageIcon, Camera, Eye } from 'lucide-react';
 import { Badge } from '../../components/design-system/Badge';
 
 export interface PhotoItem {
@@ -46,7 +46,7 @@ export const PhotoThumbnailGrid: React.FC<{
             </div>
             {photo.isCloudSynced && (
               <div className="absolute top-2 right-2 bg-emerald-600/90 text-white p-1 rounded-md backdrop-blur-xs">
-                <CloudCheck className="w-3.5 h-3.5" />
+                <CheckCircle2 className="w-3.5 h-3.5" />
               </div>
             )}
           </div>

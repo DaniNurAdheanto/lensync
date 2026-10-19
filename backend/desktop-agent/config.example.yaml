@@ -3,11 +3,16 @@
 agent:
   id: "agent-laptop-studio-1"
   name: "MacBook Pro Studio Tether"
-  version: "0.1.0"
+  version: "0.2.0"
   log_level: "info"
+  port: ":8081"
+
+session:
+  active_session_id: "session-pfw-2026"
+  active_project_id: "proj-pfw-2026"
 
 api:
-  base_url: "http://localhost:8080/api/v1"
+  base_url: "http://127.0.0.1:8080/api/v1"
   api_key: "c2c_agent_test_api_key_12345"
   heartbeat_interval_sec: 15
 
@@ -28,11 +33,13 @@ watcher:
   min_file_age_ms: 500 # Tunggu hingga file selesai ditulis oleh kamera/OS
 
 queue:
-  concurrency: 3
+  concurrency: 2
   max_retries: 5
-  retry_delay_sec: 3
-  db_cache_path: "./.c2c_state.db"
+  retry_delay_sec: 2
+  db_cache_path: "./.c2c_queue_state.json"
 
 storage:
+  provider: "google_drive" # Options: "google_drive" or "s3"
   s3_direct_upload: true
   chunk_size_mb: 8
+

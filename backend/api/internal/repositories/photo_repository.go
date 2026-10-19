@@ -3,7 +3,6 @@ package repositories
 import (
 	"context"
 	"database/sql"
-	"fmt"
 
 	"github.com/c2c/api/internal/models"
 )
@@ -15,6 +14,7 @@ type PhotoRepository interface {
 	ListBySession(ctx context.Context, sessionID string, limit, offset int) ([]models.Photo, error)
 	UpdateStatus(ctx context.Context, photoID, status string) error
 	UpdateEXIF(ctx context.Context, p *models.Photo) error
+	UpdatePreview(ctx context.Context, photoID, previewURL string) error
 }
 
 type PostgresPhotoRepo struct {
@@ -129,3 +129,10 @@ func (r *PostgresPhotoRepo) UpdateEXIF(ctx context.Context, p *models.Photo) err
 	)
 	return err
 }
+
+func (r *PostgresPhotoRepo) UpdatePreview(ctx context.Context, photoID, previewURL string) error {
+	query := `UPDATE photos SET preview_url = $1, upload_status = 'preview_ready', updated_at = NOW() WHERE id = $2;`
+	_, err := r.db.ExecContext(ctx, query, previewURL, photoID)
+	return err
+}
+

@@ -22,6 +22,7 @@ type PresignedURLRequest struct {
 	FileSizeBytes    int64  `json:"file_size_bytes"`
 	SHA256Hash       string `json:"sha256_hash"`
 	FileFormat       string `json:"file_format"`
+	StorageProvider  string `json:"storage_provider,omitempty"` // "google_drive" or "s3"
 }
 
 type PresignedURLResponse struct {
@@ -29,20 +30,25 @@ type PresignedURLResponse struct {
 	UploadTaskID    string `json:"upload_task_id"`
 	PresignedURL    string `json:"presigned_url"`
 	S3Key           string `json:"s3_key"`
+	StorageProvider string `json:"storage_provider,omitempty"`
+	GDriveFolderID  string `json:"gdrive_folder_id,omitempty"`
 	AlreadyUploaded bool   `json:"already_uploaded"`
 }
 
 type ConfirmUploadRequest struct {
-	PhotoID         string `json:"photo_id"`
-	UploadTaskID    string `json:"upload_task_id"`
-	Success         bool   `json:"success"`
-	CameraMake      string `json:"camera_make,omitempty"`
-	CameraModel     string `json:"camera_model,omitempty"`
-	LensModel       string `json:"lens_model,omitempty"`
+	PhotoID         string  `json:"photo_id"`
+	UploadTaskID    string  `json:"upload_task_id"`
+	Success         bool    `json:"success"`
+	StorageProvider string  `json:"storage_provider,omitempty"`
+	GDriveFileID    string  `json:"gdrive_file_id,omitempty"`
+	GDriveViewLink  string  `json:"gdrive_view_link,omitempty"`
+	CameraMake      string  `json:"camera_make,omitempty"`
+	CameraModel     string  `json:"camera_model,omitempty"`
+	LensModel       string  `json:"lens_model,omitempty"`
 	FocalLengthMm   float64 `json:"focal_length_mm,omitempty"`
 	ApertureFStop   float64 `json:"aperture_f_stop,omitempty"`
-	ShutterSpeedStr string `json:"shutter_speed_str,omitempty"`
-	ISOSpeed        int    `json:"iso_speed,omitempty"`
+	ShutterSpeedStr string  `json:"shutter_speed_str,omitempty"`
+	ISOSpeed        int     `json:"iso_speed,omitempty"`
 }
 
 func NewAPIClient(baseURL string, apiKey string) *APIClient {
@@ -137,3 +143,57 @@ func (c *APIClient) SendHeartbeat(ctx context.Context, deviceUID string, agentVe
 	defer resp.Body.Close()
 	return nil
 }
+
+type FastPreviewUploadRequest struct {
+	SessionID        string  `json:"session_id"`
+	DeviceID         string  `json:"device_id"`
+	OriginalFilename string  `json:"original_filename"`
+	FileSizeBytes    int64   `json:"file_size_bytes"`
+	SHA256Hash       string  `json:"sha256_hash"`
+	FileFormat       string  `json:"file_format"`
+	PreviewBase64    string  `json:"preview_base64"`
+	CameraMake       string  `json:"camera_make,omitempty"`
+	CameraModel      string  `json:"camera_model,omitempty"`
+	LensModel        string  `json:"lens_model,omitempty"`
+	FocalLengthMm    float64 `json:"focal_length_mm,omitempty"`
+	ApertureFStop    float64 `json:"aperture_f_stop,omitempty"`
+	ShutterSpeedStr  string  `json:"shutter_speed_str,omitempty"`
+	ISOSpeed         int     `json:"iso_speed,omitempty"`
+}
+
+type FastPreviewUploadResponse struct {
+	Status     string `json:"status"`
+	PhotoID    string `json:"photo_id"`
+	PreviewURL string `json:"preview_url"`
+}
+
+func (c *APIClient) UploadFastPreview(ctx context.Context, req FastPreviewUploadRequest) (*FastPreviewUploadResponse, error) {
+	data, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/photos/fast-preview", bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
+
+	resp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("fast preview api returned status %d", resp.StatusCode)
+	}
+
+	var res FastPreviewUploadResponse
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+

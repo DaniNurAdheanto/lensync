@@ -24,28 +24,29 @@ func main() {
 	log.Printf("Environment: %s", cfg.Environment)
 	log.Printf("Port: %s", cfg.Port)
 
-	// 1. Connect to PostgreSQL
-	var db *sql.DB
-	var err error
-	db, err = sql.Open("postgres", cfg.DatabaseURL)
-	if err != nil {
-		log.Printf("Warning: Failed opening DB connection: %v. Running in detached mode.", err)
-	} else if err := db.Ping(); err != nil {
-		log.Printf("Notice: DB not reachable (%v). Using detached mode for local development.", err)
-	} else {
+	// 1. Initialize Repositories (Postgres with fallback to in-memory)
+	var photoRepo repositories.PhotoRepository
+	var sessionRepo repositories.SessionRepository
+
+	db, err := sql.Open("postgres", cfg.DatabaseURL)
+	if err == nil && db.Ping() == nil {
 		log.Println("Successfully connected to PostgreSQL database.")
+		photoRepo = repositories.NewPostgresPhotoRepo(db)
+		sessionRepo = repositories.NewPostgresSessionRepo(db)
+	} else {
+		log.Printf("Notice: PostgreSQL not reachable at %s. Initializing in-memory repository for seamless local development.", cfg.DatabaseURL)
+		photoRepo = repositories.NewMemoryPhotoRepo()
+		sessionRepo = repositories.NewMemorySessionRepo()
 	}
 
-	// 2. Initialize Infrastructure & Repositories
+	// 2. Initialize Infrastructure & Cloud Storages (S3 + Google Drive)
 	jwtManager := auth.NewJWTManager(cfg.JWTSecret, 72)
 	s3Client := storage.NewS3Storage(cfg.S3Endpoint, cfg.S3AccessKey, cfg.S3SecretKey, cfg.S3BucketName, cfg.S3UseSSL)
-
-	photoRepo := repositories.NewPostgresPhotoRepo(db)
-	sessionRepo := repositories.NewPostgresSessionRepo(db)
+	gdriveClient := storage.NewGDriveStorage()
 
 	// 3. Initialize Domain Services
-	photoService := services.NewPhotoService(photoRepo, s3Client)
 	sessionService := services.NewSessionService(sessionRepo)
+	photoService := services.NewPhotoService(photoRepo, sessionRepo, s3Client, gdriveClient)
 
 	// 4. Mount API Routes
 	handler := api.SetupRouter(api.RouterDependencies{
