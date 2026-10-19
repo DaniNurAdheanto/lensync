@@ -1,0 +1,6 @@
+{
+  "name": "Camera-to-Cloud Landing Page",
+  "description": "Landing page and complete platform interface for Camera-to-Cloud automated photo tethering and cloud ingestion, built with Untitled UI design system.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

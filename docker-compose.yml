@@ -1,0 +1,86 @@
+name: camera-to-cloud
+
+services:
+  # ========================================================
+  # PostgreSQL: Relational Metadata, Sessions, Upload Status
+  # ========================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: c2c-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-c2c_db}
+      POSTGRES_USER: ${POSTGRES_USER:-c2c_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-c2c_secret_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-c2c_user} -d ${POSTGRES_DB:-c2c_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ========================================================
+  # MinIO: S3-Compatible Object Storage for RAW/JPEG Photos
+  # ========================================================
+  minio:
+    image: minio/minio:RELEASE.2024-03-05T04-48-44Z
+    container_name: c2c-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin123}
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # MinIO Web Console
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ========================================================
+  # MinIO Bucket Auto-Provisioning
+  # ========================================================
+  minio-init:
+    image: minio/mc:RELEASE.2024-03-05T04-48-44Z
+    container_name: c2c-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 ${S3_ACCESS_KEY:-minioadmin} ${S3_SECRET_KEY:-minioadmin123};
+      /usr/bin/mc mb myminio/${S3_BUCKET_NAME:-c2c-photos} --ignore-existing;
+      /usr/bin/mc anonymous set download myminio/${S3_BUCKET_NAME:-c2c-photos};
+      echo 'MinIO S3 bucket ${S3_BUCKET_NAME:-c2c-photos} successfully initialized!';
+      exit 0;
+      "
+
+  # ========================================================
+  # Redis: Upload Queue & WebSocket Event Broker (Optional)
+  # ========================================================
+  redis:
+    image: redis:7-alpine
+    container_name: c2c-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  postgres_data:
+  minio_data:
+  redis_data:

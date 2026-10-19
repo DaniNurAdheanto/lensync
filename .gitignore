@@ -1,0 +1,61 @@
+# Dependencies
+node_modules/
+vendor/
+.pnpm-store/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+config.yaml
+
+# Build outputs
+dist/
+build/
+bin/
+out/
+.next/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Go temporary files
+*.test
+*.out
+cover.out
+
+# Database & Storage Volumes
+postgres_data/
+minio_data/
+redis_data/
+
+# OS and Editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Logs and runtime data
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.c2c_cache/
+.c2c_state.db
+tmp/
+
+# Camera and RAW files test caches (avoid committing heavy photo files)
+*.CR2
+*.CR3
+*.NEF
+*.ARW
+*.DNG
+*.RAF
+*.RW2

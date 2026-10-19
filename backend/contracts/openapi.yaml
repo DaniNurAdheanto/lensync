@@ -1,0 +1,285 @@
+openapi: 3.1.0
+info:
+  title: Camera-to-Cloud (C2C) Ingestion & Streaming API
+  version: 1.0.0
+  description: RESTful API for Camera-to-Cloud real-time tethering, photo ingestion, session management, and EXIF sync.
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local Development Backend Server
+
+paths:
+  /health:
+    get:
+      summary: Health check probe
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /auth/login:
+    post:
+      summary: Authenticate user & get JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+
+  /devices/register:
+    post:
+      summary: Register or heartbeat desktop agent / camera
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterDeviceRequest'
+      responses:
+        '200':
+          description: Device registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+
+  /sessions:
+    get:
+      summary: List all active or past shoot sessions
+      responses:
+        '200':
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ShootSession'
+    post:
+      summary: Create new shoot session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionRequest'
+      responses:
+        '201':
+          description: Shoot session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShootSession'
+
+  /uploads/request-presigned-url:
+    post:
+      summary: Request presigned S3 upload URL for a new photo
+      description: Desktop agent calls this before streaming RAW/JPEG to S3 directly
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadRequest'
+      responses:
+        '200':
+          description: Presigned upload URL generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResponse'
+
+  /uploads/confirm:
+    post:
+      summary: Confirm completion of photo upload and submit EXIF data
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmUploadRequest'
+      responses:
+        '200':
+          description: Photo committed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Photo'
+
+  /photos:
+    get:
+      summary: List photos with pagination and session filtering
+      parameters:
+        - name: session_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Photos retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Photo'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    AuthTokenResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        expires_in:
+          type: integer
+        user:
+          type: object
+          properties:
+            id: { type: string }
+            email: { type: string }
+            role: { type: string }
+
+    Device:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        device_uid: { type: string }
+        name: { type: string }
+        device_type: { type: string }
+        model_name: { type: string }
+        status: { type: string }
+        last_heartbeat: { type: string, format: date-time }
+
+    RegisterDeviceRequest:
+      type: object
+      required: [device_uid, name, device_type]
+      properties:
+        device_uid: { type: string }
+        name: { type: string }
+        device_type: { type: string }
+        model_name: { type: string }
+        serial_number: { type: string }
+        agent_version: { type: string }
+
+    ShootSession:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        project_id: { type: string, format: uuid }
+        title: { type: string }
+        session_date: { type: string, format: date }
+        location: { type: string }
+        is_live: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+    CreateSessionRequest:
+      type: object
+      required: [project_id, title]
+      properties:
+        project_id: { type: string, format: uuid }
+        title: { type: string }
+        location: { type: string }
+
+    UploadRequest:
+      type: object
+      required: [session_id, original_filename, file_size_bytes, sha256_hash]
+      properties:
+        session_id: { type: string, format: uuid }
+        device_id: { type: string, format: uuid }
+        original_filename: { type: string }
+        file_size_bytes: { type: integer }
+        sha256_hash: { type: string }
+        file_format: { type: string }
+
+    UploadResponse:
+      type: object
+      properties:
+        photo_id: { type: string, format: uuid }
+        upload_task_id: { type: string, format: uuid }
+        presigned_url: { type: string }
+        s3_key: { type: string }
+        already_uploaded: { type: boolean }
+
+    ConfirmUploadRequest:
+      type: object
+      required: [photo_id, upload_task_id, success]
+      properties:
+        photo_id: { type: string, format: uuid }
+        upload_task_id: { type: string, format: uuid }
+        success: { type: boolean }
+        camera_make: { type: string }
+        camera_model: { type: string }
+        lens_model: { type: string }
+        focal_length_mm: { type: number }
+        aperture_f_stop: { type: number }
+        shutter_speed_str: { type: string }
+        iso_speed: { type: integer }
+        captured_at: { type: string, format: date-time }
+
+    Photo:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        session_id: { type: string, format: uuid }
+        original_filename: { type: string }
+        file_format: { type: string }
+        file_size_bytes: { type: integer }
+        s3_key_original: { type: string }
+        s3_key_preview: { type: string }
+        s3_key_thumbnail: { type: string }
+        camera_make: { type: string }
+        camera_model: { type: string }
+        lens_model: { type: string }
+        iso_speed: { type: integer }
+        shutter_speed_str: { type: string }
+        aperture_f_stop: { type: number }
+        upload_status: { type: string }
+        created_at: { type: string, format: date-time }

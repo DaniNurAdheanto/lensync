@@ -1,0 +1,13 @@
+{
+  "name": "@c2c/api-contracts",
+  "version": "0.1.0",
+  "description": "Shared OpenAPI specs and TypeScript/Go contracts for Camera-to-Cloud platform",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "lint": "tsc --noEmit"
+  },
+  "keywords": ["c2c", "camera-to-cloud", "contracts", "openapi"],
+  "license": "Apache-2.0"
+}
