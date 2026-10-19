@@ -28,6 +28,7 @@ func SetupRouter(deps RouterDependencies) http.Handler {
 	deviceHandler := handlers.NewDeviceHandler()
 	projectHandler := handlers.NewProjectHandler()
 	agentHandler := handlers.NewAgentHandler()
+	proofingHandler := handlers.NewProofingHandler(deps.PhotoService)
 	broker := events.GetBroker()
 
 	// Base endpoints
@@ -43,6 +44,18 @@ func SetupRouter(deps RouterDependencies) http.Handler {
 	mux.HandleFunc("/api/v1/photos/fast-preview", uploadHandler.UploadFastPreview)
 	mux.HandleFunc("/api/v1/previews/", uploadHandler.ServePreview)
 	mux.HandleFunc("/api/v1/photos", photoHandler.ListPhotos)
+
+	// Client Live Proofing endpoints
+	mux.HandleFunc("/api/v1/proofing/", proofingHandler.GetProofingSession)
+	mux.HandleFunc("/api/v1/proofing", proofingHandler.GetProofingSession)
+	mux.HandleFunc("/api/v1/photos/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/rating") {
+			proofingHandler.UpdateRating(w, r)
+			return
+		}
+		http.NotFound(w, r)
+	})
+	mux.HandleFunc("/api/v1/sessions/share", proofingHandler.ShareSession)
 
 	// Real-Time SSE Stream for Next.js Dashboard
 	mux.HandleFunc("/api/v1/events", broker.SSEHandler)

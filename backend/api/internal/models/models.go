@@ -37,14 +37,17 @@ type Project struct {
 }
 
 type ShootSession struct {
-	ID          string    `json:"id"`
-	ProjectID   string    `json:"project_id"`
-	Title       string    `json:"title"`
-	SessionDate string    `json:"session_date"`
-	Location    string    `json:"location,omitempty"`
-	IsLive      bool      `json:"is_live"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID           string    `json:"id"`
+	ProjectID    string    `json:"project_id"`
+	Title        string    `json:"title"`
+	SessionDate  string    `json:"session_date"`
+	Location     string    `json:"location,omitempty"`
+	IsLive       bool      `json:"is_live"`
+	ShareToken   string    `json:"share_token,omitempty"`
+	ClientName   string    `json:"client_name,omitempty"`
+	Photographer string    `json:"photographer,omitempty"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 type Device struct {
@@ -89,6 +92,10 @@ type Photo struct {
 	StorageProvider  string     `json:"storage_provider,omitempty"`
 	GDriveFileID     *string    `json:"gdrive_file_id,omitempty"`
 	GDriveViewLink   *string    `json:"gdrive_view_link,omitempty"`
+	Rating           int        `json:"rating"`          // 0 to 5 stars
+	IsPicked         bool       `json:"is_picked"`        // Client selected flag
+	ClientFeedback   string     `json:"client_feedback"`  // Notes for retoucher / photographer
+	RatedAt          *time.Time `json:"rated_at,omitempty"`
 	CreatedAt        time.Time  `json:"created_at"`
 	UpdatedAt        time.Time  `json:"updated_at"`
 }

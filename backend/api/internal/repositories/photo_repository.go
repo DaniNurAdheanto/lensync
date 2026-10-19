@@ -15,6 +15,7 @@ type PhotoRepository interface {
 	UpdateStatus(ctx context.Context, photoID, status string) error
 	UpdateEXIF(ctx context.Context, p *models.Photo) error
 	UpdatePreview(ctx context.Context, photoID, previewURL string) error
+	UpdateRating(ctx context.Context, photoID string, rating int, isPicked bool, feedback string) (*models.Photo, error)
 }
 
 type PostgresPhotoRepo struct {
@@ -135,4 +136,15 @@ func (r *PostgresPhotoRepo) UpdatePreview(ctx context.Context, photoID, previewU
 	_, err := r.db.ExecContext(ctx, query, previewURL, photoID)
 	return err
 }
+
+func (r *PostgresPhotoRepo) UpdateRating(ctx context.Context, photoID string, rating int, isPicked bool, feedback string) (*models.Photo, error) {
+	query := `UPDATE photos SET rating = $1, is_picked = $2, client_feedback = $3, rated_at = NOW(), updated_at = NOW() WHERE id = $4 RETURNING id;`
+	var id string
+	err := r.db.QueryRowContext(ctx, query, rating, isPicked, feedback, photoID).Scan(&id)
+	if err != nil {
+		return nil, err
+	}
+	return r.GetByID(ctx, photoID)
+}
+
 

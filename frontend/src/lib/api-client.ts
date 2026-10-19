@@ -34,6 +34,10 @@ export interface PhotoRecord {
   shutter_speed_str?: string;
   iso_speed?: number;
   upload_status: string;
+  rating?: number;
+  is_picked?: boolean;
+  client_feedback?: string;
+  rated_at?: string;
   created_at: string;
   updated_at: string;
 }
@@ -45,7 +49,29 @@ export interface ShootSession {
   session_date: string;
   location: string;
   is_live: boolean;
+  share_token?: string;
+  client_name?: string;
+  photographer?: string;
   created_at: string;
+}
+
+export interface ProofingStats {
+  total_count: number;
+  picked_count: number;
+  rated_count: number;
+  average_rating: number;
+}
+
+export interface ProofingSessionData {
+  session: ShootSession;
+  photos: PhotoRecord[];
+  stats: ProofingStats;
+}
+
+export interface RatingUpdateRequest {
+  rating: number;
+  is_picked?: boolean;
+  client_feedback?: string;
 }
 
 export interface ProjectRecord {
@@ -276,6 +302,22 @@ export class C2CClient {
       authenticated: boolean;
     }>('/storage/gdrive/status');
   }
+
+  public async getProofingSession(sessionIdOrToken: string): Promise<ProofingSessionData> {
+    return this.request<ProofingSessionData>(`/proofing/${sessionIdOrToken}`);
+  }
+
+  public async updatePhotoRating(photoId: string, payload: RatingUpdateRequest): Promise<PhotoRecord> {
+    return this.request<PhotoRecord>(`/photos/${photoId}/rating`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  public async getSessionShareLink(sessionId: string): Promise<{ session_id: string; share_url: string; public: boolean }> {
+    return this.request<{ session_id: string; share_url: string; public: boolean }>(`/sessions/share?session_id=${sessionId}`);
+  }
 }
 
 export const c2cClient = new C2CClient();
+

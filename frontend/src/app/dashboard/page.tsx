@@ -23,6 +23,9 @@ import {
   ExternalLink,
   Cloud,
   LogOut,
+  Share2,
+  Star,
+  Heart,
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthContext';
 import {
@@ -68,6 +71,7 @@ export default function PhotographerDashboard() {
   const [photos, setPhotos] = useState<PhotoRecord[]>([]);
   const [selectedPhoto, setSelectedPhoto] = useState<PhotoRecord | null>(null);
   const [copiedHash, setCopiedHash] = useState<boolean>(false);
+  const [copiedProofLink, setCopiedProofLink] = useState<boolean>(false);
 
   // Fetch initial data
   const fetchData = async () => {
@@ -134,6 +138,10 @@ export default function PhotographerDashboard() {
       });
 
       eventSource.addEventListener('photo:completed', () => {
+        fetchData();
+      });
+
+      eventSource.addEventListener('photo:rating_updated', () => {
         fetchData();
       });
 
@@ -267,6 +275,35 @@ export default function PhotographerDashboard() {
 
         {/* Right Header Status */}
         <div className="flex items-center gap-3">
+          {/* Client Proofing Portal Quick Actions */}
+          <div className="flex items-center gap-1.5 bg-indigo-50/60 border border-indigo-100 p-1 rounded-lg">
+            <Link href={`/proof/${selectedSessionId}`} target="_blank">
+              <Button
+                variant="tertiary"
+                size="sm"
+                iconLeading={<ExternalLink className="w-3.5 h-3.5 text-indigo-600" />}
+                title="Buka Halaman Live Proofing untuk Klien / Art Director"
+              >
+                <span className="hidden lg:inline text-indigo-700 font-medium">Buka Proofing</span>
+              </Button>
+            </Link>
+
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                const url = `${window.location.origin}/proof/${selectedSessionId}`;
+                navigator.clipboard.writeText(url);
+                setCopiedProofLink(true);
+                setTimeout(() => setCopiedProofLink(false), 2500);
+              }}
+              iconLeading={copiedProofLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5 text-indigo-600" />}
+              title="Salin Link Publik Proofing Klien"
+            >
+              <span>{copiedProofLink ? 'Tersalin!' : 'Share Link'}</span>
+            </Button>
+          </div>
+
           <Badge
             variant="success"
             size="md"
@@ -735,6 +772,24 @@ export default function PhotographerDashboard() {
                             <Cloud className="w-3.5 h-3.5" />
                           </div>
                         )}
+
+                        {/* Client Rating & Pick Badges */}
+                        {((p.rating && p.rating > 0) || p.is_picked) && (
+                          <div className="absolute bottom-2 left-2 flex items-center gap-1">
+                            {p.rating && p.rating > 0 ? (
+                              <span className="bg-amber-500/95 text-white backdrop-blur-sm px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 shadow-xs">
+                                <Star className="w-2.5 h-2.5 fill-current text-white" />
+                                <span>{p.rating}</span>
+                              </span>
+                            ) : null}
+                            {p.is_picked ? (
+                              <span className="bg-rose-600/95 text-white backdrop-blur-sm px-1.5 py-0.5 rounded text-[9px] font-bold flex items-center gap-0.5 shadow-xs tracking-wider">
+                                <Heart className="w-2.5 h-2.5 fill-current text-white" />
+                                <span>PICK</span>
+                              </span>
+                            ) : null}
+                          </div>
+                        )}
                       </div>
 
                       {/* Photo Metadata Footer */}
@@ -799,6 +854,28 @@ export default function PhotographerDashboard() {
                         </Badge>
                       )}
                     </div>
+
+                    {/* Client Rating & Feedback */}
+                    {((selectedPhoto.rating && selectedPhoto.rating > 0) || selectedPhoto.is_picked || selectedPhoto.client_feedback) && (
+                      <div className="bg-amber-50/80 border border-amber-200/80 rounded-lg p-2 flex flex-wrap items-center gap-2">
+                        {selectedPhoto.rating && selectedPhoto.rating > 0 ? (
+                          <div className="flex items-center gap-1 text-amber-700 font-bold text-xs bg-white px-2 py-0.5 rounded border border-amber-200">
+                            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
+                            <span>{selectedPhoto.rating} / 5</span>
+                          </div>
+                        ) : null}
+                        {selectedPhoto.is_picked && (
+                          <Badge variant="rose" size="sm" iconLeading={<Heart className="w-3 h-3 fill-rose-600 text-rose-600" />}>
+                            Pilihan Klien
+                          </Badge>
+                        )}
+                        {selectedPhoto.client_feedback && (
+                          <span className="text-[11px] text-amber-900 font-medium italic">
+                            &ldquo;{selectedPhoto.client_feedback}&rdquo;
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <div className="text-[11px] text-gray-600 flex flex-wrap gap-x-2 gap-y-1">
                       <span className="bg-white px-2 py-0.5 rounded-md border border-gray-200 shadow-xs">Kamera: {selectedPhoto.camera_make} {selectedPhoto.camera_model}</span>
                       <span className="bg-white px-2 py-0.5 rounded-md border border-gray-200 shadow-xs">Lensa: {selectedPhoto.lens_model || 'FE 24-70mm F2.8 GM II'}</span>

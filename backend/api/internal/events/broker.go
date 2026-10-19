@@ -19,6 +19,7 @@ const (
 	EventPhotoFailed       EventType = "photo:failed"
 	EventAgentStatus       EventType = "agent:status"
 	EventSessionUpdated    EventType = "session:updated"
+	EventPhotoRatingUpdated EventType = "photo:rating_updated"
 )
 
 type EventPayload struct {

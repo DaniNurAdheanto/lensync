@@ -274,3 +274,103 @@ func (s *PhotoService) UploadFastPreview(
 	return photo, nil
 }
 
+type ProofingStats struct {
+	TotalCount    int     `json:"total_count"`
+	PickedCount   int     `json:"picked_count"`
+	RatedCount    int     `json:"rated_count"`
+	AverageRating float64 `json:"average_rating"`
+}
+
+type ProofingSessionData struct {
+	Session *models.ShootSession `json:"session"`
+	Photos  []models.Photo       `json:"photos"`
+	Stats   ProofingStats        `json:"stats"`
+}
+
+func (s *PhotoService) UpdateRating(ctx context.Context, photoID string, rating int, isPicked bool, feedback string) (*models.Photo, error) {
+	if rating < 0 {
+		rating = 0
+	}
+	if rating > 5 {
+		rating = 5
+	}
+
+	updated, err := s.photoRepo.UpdateRating(ctx, photoID, rating, isPicked, feedback)
+	if err != nil {
+		return nil, err
+	}
+
+	// Broadcast live rating update to all connected dashboards and client proofing viewers
+	s.broker.Broadcast(events.EventPhotoRatingUpdated, updated)
+	log.Printf("[PhotoService] Rating updated for photo %s (Rating: %d, Picked: %v)", photoID, rating, isPicked)
+
+	return updated, nil
+}
+
+func (s *PhotoService) GetProofingData(ctx context.Context, sessionIDOrToken string) (*ProofingSessionData, error) {
+	var session *models.ShootSession
+
+	// 1. Resolve session by ID
+	if s.sessionRepo != nil {
+		sess, err := s.sessionRepo.GetByID(ctx, sessionIDOrToken)
+		if err == nil && sess != nil {
+			session = sess
+		} else {
+			// Try by share token or scan list
+			sessions, _ := s.sessionRepo.List(ctx, "")
+			for _, item := range sessions {
+				if item.ShareToken == sessionIDOrToken || item.ID == sessionIDOrToken {
+					cp := item
+					session = &cp
+					break
+				}
+			}
+		}
+	}
+
+	if session == nil {
+		// Fallback session object
+		session = &models.ShootSession{
+			ID:           sessionIDOrToken,
+			ProjectID:    "proj-default",
+			Title:        "Client Proofing Session",
+			SessionDate:  time.Now().Format("2006-01-02"),
+			Location:     "Studio Set",
+			IsLive:       true,
+			ClientName:   "Client / Art Director",
+			Photographer: "Lead Photographer",
+		}
+	}
+
+	// 2. Fetch photos for this session
+	photos, err := s.photoRepo.ListBySession(ctx, session.ID, 200, 0)
+	if err != nil {
+		photos = []models.Photo{}
+	}
+
+	// 3. Compute proofing stats
+	stats := ProofingStats{
+		TotalCount: len(photos),
+	}
+	var totalRatingSum int
+	for _, p := range photos {
+		if p.IsPicked {
+			stats.PickedCount++
+		}
+		if p.Rating > 0 {
+			stats.RatedCount++
+			totalRatingSum += p.Rating
+		}
+	}
+	if stats.RatedCount > 0 {
+		stats.AverageRating = float64(totalRatingSum) / float64(stats.RatedCount)
+	}
+
+	return &ProofingSessionData{
+		Session: session,
+		Photos:  photos,
+		Stats:   stats,
+	}, nil
+}
+
+
