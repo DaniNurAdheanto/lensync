@@ -27,6 +27,7 @@ import {
   ShootSession,
   PhotoRecord,
   ProofingStats,
+  getApiHost,
 } from '@/lib/api-client';
 import { Button, Badge, Card } from '@/components/design-system';
 
@@ -83,7 +84,7 @@ export default function ClientProofingPage() {
     // Setup Server-Sent Events (SSE) for instant live tethering stream
     let eventSource: EventSource | null = null;
     try {
-      eventSource = new EventSource('http://localhost:8080/api/v1/events');
+      eventSource = new EventSource(`${getApiHost()}/api/v1/events`);
 
       eventSource.addEventListener('photo:preview_ready', (e: any) => {
         try {
@@ -533,7 +534,7 @@ export default function ClientProofingPage() {
                         src={
                           photo.preview_url.startsWith('http')
                             ? photo.preview_url
-                            : `http://localhost:8080${photo.preview_url}`
+                            : `${getApiHost()}${photo.preview_url}`
                         }
                         alt={photo.original_filename}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -741,7 +742,7 @@ export default function ClientProofingPage() {
                   src={
                     inspectorPhoto.preview_url.startsWith('http')
                       ? inspectorPhoto.preview_url
-                      : `http://localhost:8080${inspectorPhoto.preview_url}`
+                      : `${getApiHost()}${inspectorPhoto.preview_url}`
                   }
                   alt={inspectorPhoto.original_filename}
                   className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl pointer-events-none"

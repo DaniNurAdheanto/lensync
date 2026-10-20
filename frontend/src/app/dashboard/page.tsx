@@ -35,12 +35,18 @@ import {
   AgentStatusResponse,
   QueueTask,
   PhotoRecord,
+  getApiHost,
 } from '@/lib/api-client';
 import { Button, Badge, Card } from '@/components/design-system';
+import { Sidebar, Navbar } from '@/components/dashboard';
 
 export default function PhotographerDashboard() {
   const router = useRouter();
   const { user, logout } = useAuth();
+
+  // Navigation & Layout State
+  const [activeSection, setActiveSection] = useState<string>('overview');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
 
   // Session & Project State
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
@@ -72,6 +78,26 @@ export default function PhotographerDashboard() {
   const [selectedPhoto, setSelectedPhoto] = useState<PhotoRecord | null>(null);
   const [copiedHash, setCopiedHash] = useState<boolean>(false);
   const [copiedProofLink, setCopiedProofLink] = useState<boolean>(false);
+
+  // Smooth Navigation Handler
+  const handleSelectSection = (section: string) => {
+    setActiveSection(section);
+    if (section === 'capture' || section === 'agent' || section === 'settings') {
+      const el = document.getElementById('section-control-panel');
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (section === 'queue') {
+      const el = document.getElementById('section-queue');
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (section === 'gallery') {
+      const el = document.getElementById('section-gallery');
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (section === 'storage') {
+      const el = document.getElementById('section-storage');
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (section === 'overview') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   // Fetch initial data
   const fetchData = async () => {
@@ -127,7 +153,7 @@ export default function PhotographerDashboard() {
     // 2. Server-Sent Events (SSE) listener
     let eventSource: EventSource | null = null;
     try {
-      eventSource = new EventSource('http://localhost:8080/api/v1/events');
+      eventSource = new EventSource(`${getApiHost()}/api/v1/events`);
 
       eventSource.addEventListener('photo:uploading', () => {
         fetchData();
@@ -232,167 +258,113 @@ export default function PhotographerDashboard() {
   const duplicateSkippedCount = queueTasks.filter((t) => t.status === 'duplicate_skipped').length;
 
   return (
-    <div className="min-h-screen bg-gray-50/50 text-gray-900 flex flex-col font-sans selection:bg-indigo-600 selection:text-white">
-      {/* 1. Header Bar — Untitled UI Glass Header */}
-      <header className="h-16 border-b border-gray-200/80 bg-white/95 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs">
-        <div className="flex items-center gap-4">
-          <Link href="/">
-            <Button
-              variant="secondary"
-              size="sm"
-              iconLeading={<ArrowLeft className="w-3.5 h-3.5" />}
-            >
-              Kembali ke Beranda
-            </Button>
-          </Link>
+    <div className="min-h-screen bg-gray-50/50 text-gray-900 flex font-sans selection:bg-indigo-600 selection:text-white">
+      {/* 1. Left Sidebar Navigation (Desktop Persistent + Mobile Sliding Drawer) */}
+      <Sidebar
+        activeSection={activeSection}
+        onSelectSection={handleSelectSection}
+        isMobileOpen={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
+        sessions={sessions}
+        selectedSessionId={selectedSessionId}
+        onSelectSession={setSelectedSessionId}
+        agentStatus={agentStatus}
+        queueCount={inQueueCount}
+        photosCount={photos.length}
+        gdriveStatus={gdriveStatus}
+      />
 
-          <div className="h-4 w-px bg-gray-200" />
+      {/* 2. Right Main Work Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top Navbar */}
+        <Navbar
+          onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+          activeSession={activeSessionObj}
+          sessions={sessions}
+          selectedSessionId={selectedSessionId}
+          onSelectSession={setSelectedSessionId}
+          isSyncActive={isSyncActive}
+          isAgentOnline={isAgentOnline}
+          gdriveStatus={gdriveStatus}
+          onRefresh={fetchData}
+          isRefreshing={isActionLoading}
+          activeSection={activeSection}
+          onSelectSection={handleSelectSection}
+          onCopyProofLink={() => {
+            const url = `${window.location.origin}/proof/${selectedSessionId}`;
+            navigator.clipboard.writeText(url);
+            setCopiedProofLink(true);
+            setTimeout(() => setCopiedProofLink(false), 2500);
+          }}
+          copiedProofLink={copiedProofLink}
+          queueCount={inQueueCount}
+          photosCount={photos.length}
+        />
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-xs">
-                <Camera className="w-4 h-4" />
+        {/* 3. Main Content Container */}
+        <main className="flex-1 p-4 sm:p-6 max-w-7xl mx-auto w-full space-y-6">
+          {/* Flash Message Banner */}
+          {actionMessage && (
+            <div className="bg-indigo-50/80 border border-indigo-200/80 rounded-xl px-4 py-3 flex items-center justify-between text-xs text-indigo-900 shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <Info className="w-4 h-4 text-indigo-600 shrink-0" />
+                <span className="font-medium">{actionMessage}</span>
               </div>
-              <span className="font-semibold text-sm text-gray-900 tracking-tight">
-                {activeSessionObj ? activeSessionObj.title : 'Live Shoot Session'}
-              </span>
-            </div>
-
-            {/* Sync Status Badge — Untitled UI Badge */}
-            <Badge
-              variant={isSyncActive ? 'success' : isAgentOnline ? 'warning' : 'error'}
-              dot={true}
-              size="md"
-            >
-              {isSyncActive
-                ? 'LIVE TETHER SYNCING'
-                : isAgentOnline
-                ? 'SYNC PAUSED (READY)'
-                : 'AGENT OFFLINE'}
-            </Badge>
-          </div>
-        </div>
-
-        {/* Right Header Status */}
-        <div className="flex items-center gap-3">
-          {/* Client Proofing Portal Quick Actions */}
-          <div className="flex items-center gap-1.5 bg-indigo-50/60 border border-indigo-100 p-1 rounded-lg">
-            <Link href={`/proof/${selectedSessionId}`} target="_blank">
-              <Button
-                variant="tertiary"
-                size="sm"
-                iconLeading={<ExternalLink className="w-3.5 h-3.5 text-indigo-600" />}
-                title="Buka Halaman Live Proofing untuk Klien / Art Director"
+              <button
+                onClick={() => setActionMessage(null)}
+                className="text-gray-400 hover:text-gray-700 font-mono text-xs ml-4"
               >
-                <span className="hidden lg:inline text-indigo-700 font-medium">Buka Proofing</span>
-              </Button>
-            </Link>
+                ✕
+              </button>
+            </div>
+          )}
 
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                const url = `${window.location.origin}/proof/${selectedSessionId}`;
-                navigator.clipboard.writeText(url);
-                setCopiedProofLink(true);
-                setTimeout(() => setCopiedProofLink(false), 2500);
-              }}
-              iconLeading={copiedProofLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5 text-indigo-600" />}
-              title="Salin Link Publik Proofing Klien"
-            >
-              <span>{copiedProofLink ? 'Tersalin!' : 'Share Link'}</span>
-            </Button>
-          </div>
-
-          <Badge
-            variant="success"
-            size="md"
-            iconLeading={<Cloud className="w-3.5 h-3.5" />}
-            className="hidden sm:inline-flex"
-          >
-            Google Drive: {gdriveStatus?.authenticated ? 'Cloud Sync Online' : 'Resumable Ingest Active'}
-          </Badge>
-
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={fetchData}
-            title="Refresh data"
-            aria-label="Refresh data"
-            iconLeading={<RefreshCw className={`w-3.5 h-3.5 ${isActionLoading ? 'animate-spin' : ''}`} />}
-          />
-
-          {/* User Profile & Logout */}
-          {user ? (
-            <div className="flex items-center gap-3 pl-3 border-l border-gray-200">
-              <div className="flex items-center gap-2">
-                {user.avatar_url ? (
-                  <img
-                    src={user.avatar_url}
-                    alt={user.full_name}
-                    className="w-8 h-8 rounded-full object-cover border border-gray-200 shadow-xs"
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 flex items-center justify-center font-bold text-xs shadow-xs">
-                    {user.full_name?.charAt(0) || 'U'}
+          {/* Quick Onboarding / Panduan Mudah untuk Pengguna Baru */}
+          <div className="bg-gradient-to-r from-indigo-50/90 via-indigo-50/40 to-white border border-indigo-100/90 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                <Sparkles className="w-5 h-5 text-indigo-100" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-gray-900">
+                    Panduan Cepat Memulai (3 Langkah):
+                  </h3>
+                  <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full">
+                    Otomatis & Tanpa Ribet
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2.5 text-xs text-gray-600">
+                  <div className="flex items-center gap-2 bg-white/90 border border-indigo-100/80 px-3 py-2 rounded-xl shadow-2xs">
+                    <span className="w-5 h-5 rounded-full bg-indigo-600 text-white text-[11px] font-bold flex items-center justify-center shrink-0">1</span>
+                    <span className="font-medium">Colok kamera ke laptop via USB</span>
                   </div>
-                )}
-                <div className="hidden md:block text-left">
-                  <div className="text-xs font-semibold text-gray-900 leading-tight truncate max-w-[140px]">
-                    {user.full_name}
+                  <div className="flex items-center gap-2 bg-white/90 border border-indigo-100/80 px-3 py-2 rounded-xl shadow-2xs">
+                    <span className="w-5 h-5 rounded-full bg-indigo-600 text-white text-[11px] font-bold flex items-center justify-center shrink-0">2</span>
+                    <span className="font-medium">Klik &ldquo;Mulai Hubungkan Kamera&rdquo;</span>
                   </div>
-                  <div className="text-[11px] text-gray-500 capitalize truncate max-w-[140px]">
-                    {user.studio_name || user.role}
+                  <div className="flex items-center gap-2 bg-white/90 border border-indigo-100/80 px-3 py-2 rounded-xl shadow-2xs">
+                    <span className="w-5 h-5 rounded-full bg-indigo-600 text-white text-[11px] font-bold flex items-center justify-center shrink-0">3</span>
+                    <span className="font-medium">Foto otomatis masuk ke Drive & Klien!</span>
                   </div>
                 </div>
               </div>
-
-              <Button
-                variant="tertiary"
-                size="sm"
-                onClick={() => {
-                  logout();
-                  router.push('/login');
-                }}
-                title="Keluar dari akun (Logout)"
-                aria-label="Logout"
-                iconLeading={<LogOut className="w-3.5 h-3.5 text-gray-500 hover:text-rose-600" />}
-              >
-                <span className="hidden sm:inline">Keluar</span>
-              </Button>
             </div>
-          ) : (
-            <Link href="/login">
-              <Button variant="primary" size="sm">
-                Masuk
-              </Button>
-            </Link>
-          )}
-        </div>
-      </header>
-
-      {/* 2. Main Content Container */}
-      <main className="flex-1 p-6 max-w-7xl mx-auto w-full space-y-6">
-        {/* Flash Message Banner */}
-        {actionMessage && (
-          <div className="bg-indigo-50/80 border border-indigo-200/80 rounded-xl px-4 py-3 flex items-center justify-between text-xs text-indigo-900 shadow-xs">
-            <div className="flex items-center gap-2.5">
-              <Info className="w-4 h-4 text-indigo-600 shrink-0" />
-              <span className="font-medium">{actionMessage}</span>
-            </div>
-            <button
-              onClick={() => setActionMessage(null)}
-              className="text-gray-400 hover:text-gray-700 font-mono text-xs ml-4"
-            >
-              ✕
-            </button>
           </div>
-        )}
 
-        {/* 3. Untitled UI Control Panel Card */}
-        <Card variant="default" padding="lg" className="space-y-6 relative overflow-hidden border border-gray-200/80 shadow-xs">
-          {/* Top Subtle Indigo Accent */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-indigo-600" />
+          {/* 4. Untitled UI Control Panel Card */}
+          <Card
+            id="section-control-panel"
+            variant="default"
+            padding="lg"
+            className={`space-y-6 relative overflow-hidden border transition-all duration-200 shadow-xs ${
+              activeSection === 'capture' || activeSection === 'agent' || activeSection === 'settings'
+                ? 'border-indigo-500 ring-2 ring-indigo-500/20'
+                : 'border-gray-200/80'
+            }`}
+          >
+            {/* Top Subtle Indigo Accent */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-indigo-600" />
 
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 border-b border-gray-100 pb-5">
             <div>
@@ -400,10 +372,10 @@ export default function PhotographerDashboard() {
                 <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
                   <Radio className="w-4 h-4" />
                 </div>
-                <span>Kontrol Sinkronisasi Kamera ke Google Drive</span>
+                <span>Hubungkan Kamera ke Google Drive</span>
               </h2>
               <p className="text-xs text-gray-500 mt-1 pl-10.5">
-                Local Sync Agent (Go) memantau hotfolder tethering kamera, memvalidasi file selesai ditulis, dan mengunggah langsung ke Google Drive via Google Drive v3 Resumable Upload protocol.
+                Setiap foto yang masuk ke laptop otomatis diunggah langsung ke Google Drive secara instan, aman, dan tanpa mengurangi kualitas asli foto.
               </p>
             </div>
 
@@ -417,7 +389,7 @@ export default function PhotographerDashboard() {
                   isLoading={isActionLoading}
                   iconLeading={<Square className="w-3.5 h-3.5 fill-current" />}
                 >
-                  Hentikan Sync (Pause)
+                  Jeda Sementara
                 </Button>
               ) : (
                 <Button
@@ -427,7 +399,7 @@ export default function PhotographerDashboard() {
                   isLoading={isActionLoading}
                   iconLeading={<Play className="w-3.5 h-3.5 fill-current" />}
                 >
-                  Mulai Sync (Start Tether)
+                  Mulai Hubungkan Kamera
                 </Button>
               )}
             </div>
@@ -439,7 +411,7 @@ export default function PhotographerDashboard() {
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
                 <Folder className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Folder Sumber Foto (Hotfolder)</span>
+                <span>Folder Foto di Laptop</span>
               </label>
               <div className="flex items-center gap-2">
                 <input
@@ -464,7 +436,7 @@ export default function PhotographerDashboard() {
                 )}
               </div>
               <p className="text-[11px] text-gray-500">
-                Folder output software tethering (Capture One, EOS Utility, Sony Imaging Edge, atau DCIM).
+                Folder tempat software kamera (Capture One, EOS Utility, Sony Imaging Edge, dll.) menyimpan foto di laptop.
               </p>
             </div>
 
@@ -472,7 +444,7 @@ export default function PhotographerDashboard() {
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
                 <Layers className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Proyek & Sesi Foto Aktif</span>
+                <span>Sesi Pemotretan Aktif</span>
               </label>
               <select
                 value={selectedSessionId}
@@ -489,15 +461,15 @@ export default function PhotographerDashboard() {
                 ))}
               </select>
               <p className="text-[11px] text-gray-500">
-                Foto akan dialokasikan ke folder sesi Google Drive: <code className="text-emerald-700 font-semibold font-mono">Shoot - {activeSessionObj?.title || 'Session'}</code>.
+                Foto akan otomatis tersusun rapi di Google Drive: <code className="text-emerald-700 font-semibold font-mono">Shoot - {activeSessionObj?.title || 'Session'}</code>.
               </p>
             </div>
 
-            {/* Control C: Arsitektur Adapter Kamera */}
+            {/* Control C: Mode Sambungan Kamera */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
                 <Camera className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Camera Adapter (Pluggable)</span>
+                <span>Mode Sambungan Kamera</span>
               </label>
               <select
                 value={selectedAdapterId}
@@ -508,45 +480,42 @@ export default function PhotographerDashboard() {
                 className="w-full rounded-lg border border-gray-300 text-xs font-medium text-gray-900 bg-white hover:border-gray-400 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 py-2 px-3.5 shadow-xs transition-colors focus:outline-none"
               >
                 <option value="adapter-hotfolder-tether">
-                  Hotfolder Ingestion (Capture One / EOS Utility / DCIM)
+                  Kamera Kabel USB (Sony, Canon, Nikon, Fujifilm)
                 </option>
                 <option value="adapter-usb-ptp-mtp">
-                  Direct USB PTP/MTP Protocol (Hardware Tether)
+                  Folder Otomatis (Capture One / Lightroom / EOS Utility)
                 </option>
                 <option value="sony_camera_remote_sdk">
-                  Sony Camera Remote SDK (Native Control)
+                  Kartu Memori SD Card / DCIM Kamera
                 </option>
                 <option value="canon_edsdk">
-                  Canon EDSDK Adapter
-                </option>
-                <option value="nikon_sdk">
-                  Nikon Camera Control SDK
+                  Kamera Nirkabel / Wi-Fi Sync
                 </option>
               </select>
               <p className="text-[11px] text-gray-500">
-                Arsitektur adapter modular memungkinkan integrasi SDK kamera langsung di masa depan.
+                Pilih cara kamera mentransfer foto ke laptop saat sesi pemotretan berlangsung.
               </p>
             </div>
           </div>
 
           {/* Google Drive Destination Highlight Banner */}
-          <div className="mt-2 bg-emerald-50/60 border border-emerald-200/80 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs shadow-xs">
+          <div id="section-storage" className="mt-2 bg-emerald-50/60 border border-emerald-200/80 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs shadow-xs">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-emerald-100/80 border border-emerald-200 flex items-center justify-center text-emerald-700 shadow-xs">
                 <Cloud className="w-4 h-4" />
               </div>
               <div>
-                <span className="font-semibold text-gray-700">Google Drive Destination: </span>
+                <span className="font-semibold text-gray-700">Folder Tujuan di Google Drive: </span>
                 <span className="font-mono text-emerald-700 font-bold">
                   {gdriveStatus?.target_folder_name || `Shoot - ${activeSessionObj?.title || 'Paris Fashion Week Runway Shoot'}`}
                 </span>
-                <span className="text-[11px] text-gray-500 ml-2 font-mono">
-                  (Parent ID: {gdriveStatus?.root_folder_id || 'lensync-c2c-master-root'})
+                <span className="text-[11px] text-gray-500 ml-2">
+                  (Otomatis tersimpan & terbackup)
                 </span>
               </div>
             </div>
             <Badge variant="success" size="sm" iconLeading={<CheckCircle2 className="w-3 h-3 text-emerald-600" />}>
-              Google Drive v3 Resumable Stream
+              Google Drive Siap & Aman
             </Badge>
           </div>
         </Card>
@@ -555,7 +524,7 @@ export default function PhotographerDashboard() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
           <Card variant="default" padding="md" className="hover:shadow-sm transition-all border border-gray-200/80">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Foto Masuk</span>
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Foto Diambil</span>
               <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-xs">
                 <Camera className="w-4 h-4" />
               </div>
@@ -563,12 +532,12 @@ export default function PhotographerDashboard() {
             <div className="text-3xl font-extrabold text-gray-900 mt-2 tracking-tight">
               {totalCompleted + inQueueCount}
             </div>
-            <div className="text-xs text-gray-500 mt-1 font-medium">Disinkronkan dari tethering kamera</div>
+            <div className="text-xs text-gray-500 mt-1 font-medium">Foto terdeteksi dari kamera</div>
           </Card>
 
           <Card variant="default" padding="md" className="hover:shadow-sm transition-all border border-gray-200/80">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tersimpan di Drive</span>
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tersimpan di Cloud</span>
               <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-xs">
                 <Cloud className="w-4 h-4" />
               </div>
@@ -576,12 +545,12 @@ export default function PhotographerDashboard() {
             <div className="text-3xl font-extrabold text-emerald-600 mt-2 tracking-tight">
               {totalCompleted}
             </div>
-            <div className="text-xs text-emerald-700 font-medium mt-1">Google Drive Resumable Stream OK</div>
+            <div className="text-xs text-emerald-700 font-medium mt-1">Aman di Google Drive</div>
           </Card>
 
           <Card variant="default" padding="md" className="hover:shadow-sm transition-all border border-gray-200/80">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Antrean Upload Aktif</span>
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Sedang Dikirim</span>
               <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shadow-xs">
                 <Clock className="w-4 h-4" />
               </div>
@@ -589,12 +558,12 @@ export default function PhotographerDashboard() {
             <div className="text-3xl font-extrabold text-amber-600 mt-2 tracking-tight">
               {inQueueCount}
             </div>
-            <div className="text-xs text-gray-500 mt-1 font-medium">Antrean persisten (crash-safe)</div>
+            <div className="text-xs text-gray-500 mt-1 font-medium">Antrean pengiriman aman</div>
           </Card>
 
           <Card variant="default" padding="md" className="hover:shadow-sm transition-all border border-gray-200/80">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Deduplikasi & Retry</span>
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Duplikat Dicegah</span>
               <div className="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center shadow-xs">
                 <Sparkles className="w-4 h-4" />
               </div>
@@ -602,7 +571,7 @@ export default function PhotographerDashboard() {
             <div className="text-3xl font-extrabold text-sky-600 mt-2 tracking-tight">
               {duplicateSkippedCount + retryingCount}
             </div>
-            <div className="text-xs text-gray-500 mt-1 font-medium">Deduplikasi SHA-256 & backoff</div>
+            <div className="text-xs text-gray-500 mt-1 font-medium">Foto ganda tidak diupload ulang</div>
           </Card>
         </div>
 
@@ -610,6 +579,7 @@ export default function PhotographerDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Column: Persistent Upload Queue (5 cols) */}
           <Card
+            id="section-queue"
             variant="default"
             padding="none"
             className="lg:col-span-5 flex flex-col h-[580px] overflow-hidden border border-gray-200/80 shadow-xs"
@@ -619,10 +589,10 @@ export default function PhotographerDashboard() {
                 <div className="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
                   <UploadCloud className="w-4 h-4" />
                 </div>
-                <h3 className="font-semibold text-sm text-gray-900">Antrean Upload Persisten</h3>
+                <h3 className="font-semibold text-sm text-gray-900">Proses Pengiriman Foto</h3>
               </div>
               <Badge variant="gray" size="sm">
-                {queueTasks.length} total tasks
+                {queueTasks.length} foto diproses
               </Badge>
             </div>
 
@@ -632,9 +602,9 @@ export default function PhotographerDashboard() {
                   <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto text-gray-400 mb-2">
                     <UploadCloud className="w-6 h-6" />
                   </div>
-                  <p className="font-medium text-gray-600">Belum ada foto dalam antrean upload.</p>
+                  <p className="font-medium text-gray-600">Belum ada foto yang sedang dikirim.</p>
                   <p className="text-[11px] text-gray-400 max-w-xs mx-auto">
-                    Kamera yang memotret ke folder <code className="text-indigo-600 font-mono font-semibold">{watchPath}</code> akan otomatis masuk ke sini.
+                    Foto yang baru dijepret kamera akan otomatis muncul dan diunggah ke Google Drive di sini.
                   </p>
                 </div>
               ) : (
@@ -652,7 +622,7 @@ export default function PhotographerDashboard() {
                         </div>
                         <div className="text-[11px] text-gray-500 font-mono mt-1 flex items-center gap-3">
                           <span>{(t.photo.size_bytes / (1024 * 1024)).toFixed(1)} MB</span>
-                          <span className="text-gray-400">SHA: {t.id.slice(0, 8)}</span>
+                          <span className="text-gray-400">ID: {t.id.slice(0, 8)}</span>
                         </div>
                       </div>
 
@@ -660,32 +630,32 @@ export default function PhotographerDashboard() {
                       <div className="shrink-0">
                         {t.status === 'completed' && (
                           <Badge variant="success" size="sm" iconLeading={<CheckCircle2 className="w-3 h-3 text-emerald-600" />}>
-                            Uploaded (Drive)
+                            Tersimpan di Drive
                           </Badge>
                         )}
                         {t.status === 'processing' && (
                           <Badge variant="indigo" size="sm" iconLeading={<RefreshCw className="w-3 h-3 animate-spin text-indigo-600" />}>
-                            Uploading Drive
+                            Sedang Mengunggah...
                           </Badge>
                         )}
                         {t.status === 'queued' && (
                           <Badge variant="warning" size="sm" iconLeading={<Clock className="w-3 h-3 text-amber-600" />}>
-                            Queued
+                            Menunggu Giliran
                           </Badge>
                         )}
                         {t.status === 'retrying' && (
                           <Badge variant="warning" size="sm" iconLeading={<RefreshCw className="w-3 h-3 text-amber-600" />}>
-                            Retry #{t.retry_count}
+                            Mencoba Ulang ({t.retry_count})
                           </Badge>
                         )}
                         {t.status === 'duplicate_skipped' && (
                           <Badge variant="gray" size="sm" iconLeading={<Sparkles className="w-3 h-3 text-indigo-500" />}>
-                            Deduplicated
+                            Duplikat Dilewati
                           </Badge>
                         )}
                         {t.status === 'failed' && (
                           <Badge variant="error" size="sm" iconLeading={<AlertTriangle className="w-3 h-3 text-rose-600" />}>
-                            Failed
+                            Gagal Mengunggah
                           </Badge>
                         )}
                       </div>
@@ -693,7 +663,7 @@ export default function PhotographerDashboard() {
 
                     {t.error_message && (
                       <p className="text-[11px] text-rose-600 font-mono mt-2 truncate bg-rose-50 p-2 rounded-lg border border-rose-100">
-                        Err: {t.error_message}
+                        Catatan: {t.error_message}
                       </p>
                     )}
                   </div>
@@ -704,17 +674,18 @@ export default function PhotographerDashboard() {
 
           {/* Right Column: Live Photo Gallery & EXIF Inspector (7 cols) */}
           <Card
+            id="section-gallery"
             variant="default"
             padding="none"
             className="lg:col-span-7 flex flex-col h-[580px] overflow-hidden border border-gray-200/80 shadow-xs"
           >
             <div className="px-5 py-4 border-b border-gray-200/80 bg-gray-50/50 flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-sm text-gray-900">Live Ingestion Gallery</h3>
-                <p className="text-[11px] text-gray-500">Foto masuk langsung dari kamera dan tersinkron ke Google Drive</p>
+                <h3 className="font-semibold text-sm text-gray-900">Galeri Foto Masuk (Live)</h3>
+                <p className="text-[11px] text-gray-500">Foto langsung muncul di sini dalam sekejap begitu kamera memotret</p>
               </div>
               <Badge variant="success" size="sm">
-                {photos.length} foto di Drive
+                {photos.length} foto tersimpan
               </Badge>
             </div>
 
@@ -724,8 +695,8 @@ export default function PhotographerDashboard() {
                   <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-400 mb-2">
                     <Camera className="w-7 h-7" />
                   </div>
-                  <p className="font-medium text-gray-600">Belum ada foto yang tersimpan di Google Drive untuk sesi ini.</p>
-                  <p className="text-[11px] text-gray-400">Ambil foto melalui tethering kamera untuk memulai sinkronisasi.</p>
+                  <p className="font-medium text-gray-600">Belum ada foto untuk sesi ini.</p>
+                  <p className="text-[11px] text-gray-400">Colok kamera ke laptop dan mulailah memotret untuk melihat foto muncul secara otomatis.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -743,7 +714,7 @@ export default function PhotographerDashboard() {
                       <div className="aspect-[4/3] bg-gradient-to-br from-gray-100 via-gray-50 to-indigo-50/20 relative overflow-hidden flex items-center justify-center">
                         {p.preview_url ? (
                           <img
-                            src={p.preview_url.startsWith('http') ? p.preview_url : `http://localhost:8080${p.preview_url}`}
+                            src={p.preview_url.startsWith('http') ? p.preview_url : `${getApiHost()}${p.preview_url}`}
                             alt={p.original_filename}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
@@ -834,7 +805,7 @@ export default function PhotographerDashboard() {
                   {selectedPhoto.preview_url && (
                     <div className="w-20 h-16 rounded-lg overflow-hidden border border-gray-200 shadow-xs shrink-0 bg-gray-100">
                       <img
-                        src={selectedPhoto.preview_url.startsWith('http') ? selectedPhoto.preview_url : `http://localhost:8080${selectedPhoto.preview_url}`}
+                        src={selectedPhoto.preview_url.startsWith('http') ? selectedPhoto.preview_url : `${getApiHost()}${selectedPhoto.preview_url}`}
                         alt={selectedPhoto.original_filename}
                         className="w-full h-full object-cover"
                       />
@@ -846,11 +817,11 @@ export default function PhotographerDashboard() {
                       <span className="font-semibold text-gray-900 text-sm">{selectedPhoto.original_filename}</span>
                       {selectedPhoto.upload_status === 'preview_ready' ? (
                         <Badge variant="warning" size="sm" iconLeading={<Sparkles className="w-3 h-3 text-amber-600" />}>
-                          Preview Siap (RAW Mengunggah...)
+                          Preview Siap (File Asli Sedang Diunggah...)
                         </Badge>
                       ) : (
                         <Badge variant="success" size="sm" iconLeading={<CheckCircle2 className="w-3 h-3 text-emerald-600" />}>
-                          RAW Terkonfirmasi di Google Drive
+                          Foto Tersimpan Aman di Google Drive
                         </Badge>
                       )}
                     </div>
@@ -861,7 +832,7 @@ export default function PhotographerDashboard() {
                         {selectedPhoto.rating && selectedPhoto.rating > 0 ? (
                           <div className="flex items-center gap-1 text-amber-700 font-bold text-xs bg-white px-2 py-0.5 rounded border border-amber-200">
                             <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
-                            <span>{selectedPhoto.rating} / 5</span>
+                            <span>{selectedPhoto.rating} / 5 Bintang</span>
                           </div>
                         ) : null}
                         {selectedPhoto.is_picked && (
@@ -879,16 +850,17 @@ export default function PhotographerDashboard() {
                     <div className="text-[11px] text-gray-600 flex flex-wrap gap-x-2 gap-y-1">
                       <span className="bg-white px-2 py-0.5 rounded-md border border-gray-200 shadow-xs">Kamera: {selectedPhoto.camera_make} {selectedPhoto.camera_model}</span>
                       <span className="bg-white px-2 py-0.5 rounded-md border border-gray-200 shadow-xs">Lensa: {selectedPhoto.lens_model || 'FE 24-70mm F2.8 GM II'}</span>
-                      <span className="bg-white px-2 py-0.5 rounded-md border border-gray-200 shadow-xs">Aperture: {selectedPhoto.aperture_f_stop ? `f/${selectedPhoto.aperture_f_stop}` : 'f/2.8'}</span>
-                      <span className="bg-white px-2 py-0.5 rounded-md border border-gray-200 shadow-xs">Shutter: {selectedPhoto.shutter_speed_str || '1/500s'}</span>
+                      <span className="bg-white px-2 py-0.5 rounded-md border border-gray-200 shadow-xs">Bukaan: {selectedPhoto.aperture_f_stop ? `f/${selectedPhoto.aperture_f_stop}` : 'f/2.8'}</span>
+                      <span className="bg-white px-2 py-0.5 rounded-md border border-gray-200 shadow-xs">Kecepatan: {selectedPhoto.shutter_speed_str || '1/500s'}</span>
                       <span className="bg-white px-2 py-0.5 rounded-md border border-gray-200 shadow-xs">ISO: {selectedPhoto.iso_speed || 100}</span>
                     </div>
                     <div className="text-[11px] text-gray-500 flex flex-wrap items-center gap-3">
-                      <span>Drive File ID: <code className="text-emerald-700 font-bold font-mono bg-white px-1.5 py-0.5 rounded border border-gray-200">{selectedPhoto.gdrive_file_id || 'syncing_in_background...'}</code></span>
-                      <span>SHA-256: <code className="font-mono">{selectedPhoto.sha256_hash.slice(0, 16)}...</code></span>
+                      <span>Kode File di Drive: <code className="text-emerald-700 font-bold font-mono bg-white px-1.5 py-0.5 rounded border border-gray-200">{selectedPhoto.gdrive_file_id || 'tersimpan_di_folder'}</code></span>
+                      <span>Keaslian Foto (Checksum): <code className="font-mono">{selectedPhoto.sha256_hash.slice(0, 16)}...</code></span>
                       <button
                         onClick={() => handleCopyHash(selectedPhoto.sha256_hash)}
                         className="hover:text-gray-900 text-gray-500 flex items-center gap-1"
+                        title="Salin kode keaslian foto"
                       >
                         {copiedHash ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
                       </button>
@@ -925,6 +897,7 @@ export default function PhotographerDashboard() {
           </Card>
         </div>
       </main>
+      </div>
     </div>
   );
 }

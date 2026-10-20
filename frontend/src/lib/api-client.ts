@@ -1,4 +1,21 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+export function getApiBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  if (typeof window !== 'undefined') {
+    return `${window.location.protocol}//${window.location.hostname}:8080/api/v1`;
+  }
+  return 'http://localhost:8080/api/v1';
+}
+
+export function getApiHost(): string {
+  if (typeof window !== 'undefined') {
+    return `${window.location.protocol}//${window.location.hostname}:8080`;
+  }
+  return 'http://localhost:8080';
+}
+
+const BASE_URL = getApiBaseUrl();
 
 export interface PresignedURLResponse {
   photo_id: string;
@@ -178,7 +195,12 @@ export class C2CClient {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
+    const effectiveBaseUrl =
+      typeof window !== 'undefined' && this.baseURL.includes('localhost:8080')
+        ? getApiBaseUrl()
+        : this.baseURL;
+
+    const response = await fetch(`${effectiveBaseUrl}${endpoint}`, {
       ...options,
       headers,
     });
